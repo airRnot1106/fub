@@ -71,7 +71,7 @@ bkm --tag "tag1,tag2"  # タグフィルタリング
 
 ## 開発方針
 
-### 1. TDD (Test-Driven Development)
+### 1. TDD (Test-Driven Development) - 和田卓人（t_wada）のTDD
 
 - **Red-Green-Refactor**サイクル
 - **Red**: 失敗するテストを最初に書く
