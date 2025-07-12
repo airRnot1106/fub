@@ -56,7 +56,7 @@ Deno.test("BookmarkTag - should reject whitespace-only string", () => {
 Deno.test("BookmarkTag - should reject too long string", () => {
   fc.assert(
     fc.property(
-      fc.string({ minLength: 51 }),
+      fc.string({ minLength: 51 }).filter((s) => s.trim().length > 50),
       (longTag) => {
         const result = BookmarkTag.create(longTag);
         assertEquals(Result.isFailure(result), true);
