@@ -21,7 +21,13 @@ export class JsonBookmarkRepository implements BookmarkRepository {
     this.filePath = `${dataDir}/bookmarks.json`;
   }
 
-  async save(bookmark: Bookmark): Promise<Result.Result<void, Error>> {
+  save(bookmark: Bookmark): Result.ResultAsync<void, Error> {
+    return this.saveInternal(bookmark) as Result.ResultAsync<void, Error>;
+  }
+
+  private async saveInternal(
+    bookmark: Bookmark,
+  ): Promise<Result.Result<void, Error>> {
     try {
       const bookmarks = await this.loadBookmarks();
       const bookmarkData: BookmarkData = {
@@ -56,7 +62,14 @@ export class JsonBookmarkRepository implements BookmarkRepository {
     }
   }
 
-  async findById(
+  findById(id: BookmarkId): Result.ResultAsync<Bookmark | null, Error> {
+    return this.findByIdInternal(id) as Result.ResultAsync<
+      Bookmark | null,
+      Error
+    >;
+  }
+
+  private async findByIdInternal(
     id: BookmarkId,
   ): Promise<Result.Result<Bookmark | null, Error>> {
     try {
@@ -82,7 +95,11 @@ export class JsonBookmarkRepository implements BookmarkRepository {
     }
   }
 
-  async findAll(): Promise<Result.Result<Bookmark[], Error>> {
+  findAll(): Result.ResultAsync<Bookmark[], Error> {
+    return this.findAllInternal() as Result.ResultAsync<Bookmark[], Error>;
+  }
+
+  private async findAllInternal(): Promise<Result.Result<Bookmark[], Error>> {
     try {
       const bookmarksData = await this.loadBookmarks();
       const bookmarks: Bookmark[] = [];
@@ -106,7 +123,13 @@ export class JsonBookmarkRepository implements BookmarkRepository {
     }
   }
 
-  async findByTag(tag: BookmarkTag): Promise<Result.Result<Bookmark[], Error>> {
+  findByTag(tag: BookmarkTag): Result.ResultAsync<Bookmark[], Error> {
+    return this.findByTagInternal(tag) as Result.ResultAsync<Bookmark[], Error>;
+  }
+
+  private async findByTagInternal(
+    tag: BookmarkTag,
+  ): Promise<Result.Result<Bookmark[], Error>> {
     try {
       const bookmarksData = await this.loadBookmarks();
       const matchingBookmarks: Bookmark[] = [];
@@ -132,7 +155,13 @@ export class JsonBookmarkRepository implements BookmarkRepository {
     }
   }
 
-  async delete(id: BookmarkId): Promise<Result.Result<void, Error>> {
+  delete(id: BookmarkId): Result.ResultAsync<void, Error> {
+    return this.deleteInternal(id) as Result.ResultAsync<void, Error>;
+  }
+
+  private async deleteInternal(
+    id: BookmarkId,
+  ): Promise<Result.Result<void, Error>> {
     try {
       const bookmarks = await this.loadBookmarks();
       const filteredBookmarks = bookmarks.filter((b) => b.id !== id.value);

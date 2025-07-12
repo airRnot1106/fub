@@ -12,32 +12,46 @@ class MockBookmarkRepository implements BookmarkRepository {
   public saveCallCount = 0;
   public lastSavedBookmark: Bookmark | null = null;
 
-  save(bookmark: Bookmark): Result.Result<void, Error> {
+  save(bookmark: Bookmark): Result.ResultAsync<void, Error> {
     this.saveCallCount++;
     this.lastSavedBookmark = bookmark;
     this.bookmarks.set(bookmark.id.value, bookmark);
-    return Result.succeed(undefined);
+    return Promise.resolve(Result.succeed(undefined)) as Result.ResultAsync<
+      void,
+      Error
+    >;
   }
 
-  findById(id: BookmarkId): Result.Result<Bookmark | null, Error> {
+  findById(id: BookmarkId): Result.ResultAsync<Bookmark | null, Error> {
     const bookmark = this.bookmarks.get(id.value) || null;
-    return Result.succeed(bookmark);
+    return Promise.resolve(Result.succeed(bookmark)) as Result.ResultAsync<
+      Bookmark | null,
+      Error
+    >;
   }
 
-  findAll(): Result.Result<Bookmark[], Error> {
-    return Result.succeed(Array.from(this.bookmarks.values()));
+  findAll(): Result.ResultAsync<Bookmark[], Error> {
+    return Promise.resolve(
+      Result.succeed(Array.from(this.bookmarks.values())),
+    ) as Result.ResultAsync<Bookmark[], Error>;
   }
 
-  findByTag(tag: BookmarkTag): Result.Result<Bookmark[], Error> {
+  findByTag(tag: BookmarkTag): Result.ResultAsync<Bookmark[], Error> {
     const bookmarks = Array.from(this.bookmarks.values()).filter(
       (b) => b.tags.some((t) => t.equals(tag)),
     );
-    return Result.succeed(bookmarks);
+    return Promise.resolve(Result.succeed(bookmarks)) as Result.ResultAsync<
+      Bookmark[],
+      Error
+    >;
   }
 
-  delete(id: BookmarkId): Result.Result<void, Error> {
+  delete(id: BookmarkId): Result.ResultAsync<void, Error> {
     this.bookmarks.delete(id.value);
-    return Result.succeed(undefined);
+    return Promise.resolve(Result.succeed(undefined)) as Result.ResultAsync<
+      void,
+      Error
+    >;
   }
 
   reset(): void {
@@ -63,17 +77,21 @@ const tagStringGenerator = fc.string({ minLength: 1, maxLength: 30 }).filter(
   (s) => s.trim().length > 0,
 );
 
-Deno.test("AddBookmark - should create and save bookmark successfully", () => {
-  fc.assert(
-    fc.property(
+Deno.test("AddBookmark - should create and save bookmark successfully", async () => {
+  await fc.assert(
+    fc.asyncProperty(
       urlStringGenerator,
       titleStringGenerator,
       fc.array(tagStringGenerator, { maxLength: 5 }),
-      (urlString, titleString, tagStrings) => {
+      async (urlString, titleString, tagStrings) => {
         const repository = new MockBookmarkRepository();
         const addBookmark = new AddBookmark(repository);
 
-        const result = addBookmark.execute(urlString, titleString, tagStrings);
+        const result = await addBookmark.execute(
+          urlString,
+          titleString,
+          tagStrings,
+        );
 
         assertEquals(Result.isSuccess(result), true);
 
@@ -99,7 +117,7 @@ Deno.test("AddBookmark - should create and save bookmark successfully", () => {
   );
 });
 
-Deno.test("AddBookmark - should fail with invalid URL", () => {
+Deno.test("AddBookmark - should fail with invalid URL", async () => {
   const repository = new MockBookmarkRepository();
   const addBookmark = new AddBookmark(repository);
 
@@ -110,14 +128,14 @@ Deno.test("AddBookmark - should fail with invalid URL", () => {
     "javascript:alert('xss')",
   ];
 
-  invalidUrls.forEach((invalidUrl) => {
-    const result = addBookmark.execute(invalidUrl, "Valid Title", []);
+  for (const invalidUrl of invalidUrls) {
+    const result = await addBookmark.execute(invalidUrl, "Valid Title", []);
     assertEquals(Result.isFailure(result), true);
     assertEquals(repository.saveCallCount, 0);
-  });
+  }
 });
 
-Deno.test("AddBookmark - should fail with invalid title", () => {
+Deno.test("AddBookmark - should fail with invalid title", async () => {
   const repository = new MockBookmarkRepository();
   const addBookmark = new AddBookmark(repository);
 
@@ -127,14 +145,18 @@ Deno.test("AddBookmark - should fail with invalid title", () => {
     "a".repeat(501), // Too long
   ];
 
-  invalidTitles.forEach((invalidTitle) => {
-    const result = addBookmark.execute("https://example.com", invalidTitle, []);
+  for (const invalidTitle of invalidTitles) {
+    const result = await addBookmark.execute(
+      "https://example.com",
+      invalidTitle,
+      [],
+    );
     assertEquals(Result.isFailure(result), true);
     assertEquals(repository.saveCallCount, 0);
-  });
+  }
 });
 
-Deno.test("AddBookmark - should fail with invalid tags", () => {
+Deno.test("AddBookmark - should fail with invalid tags", async () => {
   const repository = new MockBookmarkRepository();
   const addBookmark = new AddBookmark(repository);
 
@@ -144,59 +166,75 @@ Deno.test("AddBookmark - should fail with invalid tags", () => {
     ["a".repeat(51)], // Too long tag
   ];
 
-  invalidTagLists.forEach((invalidTags) => {
-    const result = addBookmark.execute(
+  for (const invalidTags of invalidTagLists) {
+    const result = await addBookmark.execute(
       "https://example.com",
       "Valid Title",
       invalidTags,
     );
     assertEquals(Result.isFailure(result), true);
     assertEquals(repository.saveCallCount, 0);
-  });
+  }
 });
 
-Deno.test("AddBookmark - should handle repository save failure", () => {
+Deno.test("AddBookmark - should handle repository save failure", async () => {
   class FailingRepository implements BookmarkRepository {
-    save(_bookmark: Bookmark): Result.Result<void, Error> {
-      return Result.fail(new Error("Database connection failed"));
+    save(_bookmark: Bookmark): Result.ResultAsync<void, Error> {
+      return Promise.resolve(
+        Result.fail(new Error("Database connection failed")),
+      ) as Result.ResultAsync<void, Error>;
     }
 
-    findById(_id: BookmarkId): Result.Result<Bookmark | null, Error> {
-      return Result.succeed(null);
+    findById(_id: BookmarkId): Result.ResultAsync<Bookmark | null, Error> {
+      return Promise.resolve(Result.succeed(null)) as Result.ResultAsync<
+        Bookmark | null,
+        Error
+      >;
     }
 
-    findAll(): Result.Result<Bookmark[], Error> {
-      return Result.succeed([]);
+    findAll(): Result.ResultAsync<Bookmark[], Error> {
+      return Promise.resolve(Result.succeed([])) as Result.ResultAsync<
+        Bookmark[],
+        Error
+      >;
     }
 
-    findByTag(_tag: BookmarkTag): Result.Result<Bookmark[], Error> {
-      return Result.succeed([]);
+    findByTag(_tag: BookmarkTag): Result.ResultAsync<Bookmark[], Error> {
+      return Promise.resolve(Result.succeed([])) as Result.ResultAsync<
+        Bookmark[],
+        Error
+      >;
     }
 
-    delete(_id: BookmarkId): Result.Result<void, Error> {
-      return Result.succeed(undefined);
+    delete(_id: BookmarkId): Result.ResultAsync<void, Error> {
+      return Promise.resolve(Result.succeed(undefined)) as Result.ResultAsync<
+        void,
+        Error
+      >;
     }
   }
 
   const repository = new FailingRepository();
   const addBookmark = new AddBookmark(repository);
 
-  const result = addBookmark.execute("https://example.com", "Valid Title", [
-    "tag1",
-  ]);
+  const result = await addBookmark.execute(
+    "https://example.com",
+    "Valid Title",
+    ["tag1"],
+  );
   assertEquals(Result.isFailure(result), true);
 });
 
-Deno.test("AddBookmark - should create bookmark with empty tags", () => {
-  fc.assert(
-    fc.property(
+Deno.test("AddBookmark - should create bookmark with empty tags", async () => {
+  await fc.assert(
+    fc.asyncProperty(
       urlStringGenerator,
       titleStringGenerator,
-      (urlString, titleString) => {
+      async (urlString, titleString) => {
         const repository = new MockBookmarkRepository();
         const addBookmark = new AddBookmark(repository);
 
-        const result = addBookmark.execute(urlString, titleString, []);
+        const result = await addBookmark.execute(urlString, titleString, []);
 
         assertEquals(Result.isSuccess(result), true);
 
@@ -210,12 +248,20 @@ Deno.test("AddBookmark - should create bookmark with empty tags", () => {
   );
 });
 
-Deno.test("AddBookmark - should generate unique IDs", () => {
+Deno.test("AddBookmark - should generate unique IDs", async () => {
   const repository = new MockBookmarkRepository();
   const addBookmark = new AddBookmark(repository);
 
-  const result1 = addBookmark.execute("https://example.com", "Title 1", []);
-  const result2 = addBookmark.execute("https://example.com", "Title 2", []);
+  const result1 = await addBookmark.execute(
+    "https://example.com",
+    "Title 1",
+    [],
+  );
+  const result2 = await addBookmark.execute(
+    "https://example.com",
+    "Title 2",
+    [],
+  );
 
   assertEquals(Result.isSuccess(result1), true);
   assertEquals(Result.isSuccess(result2), true);

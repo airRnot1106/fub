@@ -71,9 +71,9 @@ export class Bookmark {
 
 // Repository interface
 export interface BookmarkRepository {
-  save(bookmark: Bookmark): Promise<Result.Result<void, Error>>;
-  findById(id: BookmarkId): Promise<Result.Result<Bookmark | null, Error>>;
-  findAll(): Promise<Result.Result<Bookmark[], Error>>;
-  findByTag(tag: BookmarkTag): Promise<Result.Result<Bookmark[], Error>>;
-  delete(id: BookmarkId): Promise<Result.Result<void, Error>>;
+  save(bookmark: Bookmark): Result.ResultAsync<void, Error>;
+  findById(id: BookmarkId): Result.ResultAsync<Bookmark | null, Error>;
+  findAll(): Result.ResultAsync<Bookmark[], Error>;
+  findByTag(tag: BookmarkTag): Result.ResultAsync<Bookmark[], Error>;
+  delete(id: BookmarkId): Result.ResultAsync<void, Error>;
 }

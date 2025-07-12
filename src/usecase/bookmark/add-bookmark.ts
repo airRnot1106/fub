@@ -8,12 +8,12 @@ import { BookmarkTag } from "../../core/bookmark/bookmark-tag.ts";
 export class AddBookmark {
   constructor(private readonly repository: BookmarkRepository) {}
 
-  async execute(
+  execute(
     urlString: string,
     titleString: string,
     tagStrings: string[],
-  ): Promise<Result.Result<Bookmark, Error[]>> {
-    const validationResult = Result.pipe(
+  ): Result.ResultAsync<Bookmark, Error[]> {
+    return Result.pipe(
       Result.do(),
       Result.bind("id", () => Result.succeed(BookmarkId.generate())),
       Result.bind("title", () => BookmarkTitle.create(titleString)),
@@ -28,22 +28,13 @@ export class AddBookmark {
       Result.andThen(({ id, title, url, tags }) =>
         Bookmark.create(id, title, url, tags)
       ),
+      Result.andThen((bookmark) =>
+        Result.pipe(
+          this.repository.save(bookmark),
+          Result.map(() => bookmark),
+        )
+      ),
+      Result.mapError((error) => Array.isArray(error) ? error : [error]),
     );
-
-    if (Result.isFailure(validationResult)) {
-      const errors = Array.isArray(validationResult.error)
-        ? validationResult.error
-        : [validationResult.error];
-      return Result.fail(errors);
-    }
-
-    const bookmark = validationResult.value;
-    const saveResult = await this.repository.save(bookmark);
-
-    if (Result.isFailure(saveResult)) {
-      return Result.fail([saveResult.error]);
-    }
-
-    return Result.succeed(bookmark);
   }
 }
