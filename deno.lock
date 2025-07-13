@@ -2,7 +2,9 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/assert@1": "1.0.6",
+    "jsr:@std/assert@^1.0.6": "1.0.6",
     "jsr:@std/internal@^1.0.4": "1.0.9",
+    "jsr:@std/testing@1": "1.0.3",
     "npm:@praha/byethrow@0.6.0": "0.6.0",
     "npm:fast-check@4.2.0": "4.2.0"
   },
@@ -15,6 +17,12 @@
     },
     "@std/internal@1.0.9": {
       "integrity": "bdfb97f83e4db7a13e8faab26fb1958d1b80cc64366501af78a0aee151696eb8"
+    },
+    "@std/testing@1.0.3": {
+      "integrity": "f98c2bee53860a5916727d7e7d3abe920dd6f9edace022e2d059f00d05c2cf42",
+      "dependencies": [
+        "jsr:@std/assert@^1.0.6"
+      ]
     }
   },
   "npm": {
@@ -42,6 +50,7 @@
       "jsr:@cliffy/command@1.0.0-rc.8",
       "jsr:@cliffy/prompt@1.0.0-rc.8",
       "jsr:@std/assert@1",
+      "jsr:@std/testing@1",
       "npm:@praha/byethrow@0.6.0",
       "npm:fast-check@4.2.0"
     ]
