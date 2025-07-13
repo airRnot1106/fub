@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { assertSpyCall, assertSpyCalls, spy, stub } from "@std/testing/mock";
+import { assertSpyCall, assertSpyCalls, spy } from "@std/testing/mock";
 import { Result } from "@praha/byethrow";
 import * as fc from "fast-check";
 import { AddBookmark } from "./add-bookmark.ts";
@@ -40,11 +40,11 @@ Deno.test("AddBookmark - should create and save bookmark successfully", async ()
         if (Result.isSuccess(result)) {
           const bookmark = result.value;
 
-          assertEquals(bookmark.title.value, title);
-          assertEquals(bookmark.url.value, url);
+          assertEquals(bookmark.title.value, title.trim());
+          assertEquals(bookmark.url.value, url.trim());
           assertEquals(bookmark.tags.length, tags.length);
           for (let i = 0; i < tags.length; i++) {
-            assertEquals(bookmark.tags[i].value, tags[i]);
+            assertEquals(bookmark.tags[i].value, tags[i].trim());
           }
 
           assertSpyCalls(repository.save, 1);
@@ -163,14 +163,14 @@ Deno.test("AddBookmark - should fail with invalid tags", async () => {
 });
 
 Deno.test("AddBookmark - should handle repository save failure", async () => {
-  const repository = createMockRepository();
-
-  // Stub the save method to return failure
-  stub(
-    repository,
-    "save",
-    () => Promise.resolve(Result.fail(new Error("Database connection failed"))),
-  );
+  const mockRepository = {
+    save: (): Result.ResultAsync<void, Error> =>
+      Promise.resolve(Result.fail(new Error("Database connection failed"))),
+  };
+  const repository = {
+    ...mockRepository,
+    save: spy(mockRepository, "save"),
+  };
 
   const addBookmark = new AddBookmark(repository);
 
@@ -260,10 +260,10 @@ Deno.test("AddBookmark - should trim whitespace from inputs", async () => {
 
         if (Result.isSuccess(result)) {
           const bookmark = result.value;
-          assertEquals(bookmark.title.value, title);
-          assertEquals(bookmark.url.value, url);
+          assertEquals(bookmark.title.value, title.trim());
+          assertEquals(bookmark.url.value, url.trim());
           for (let i = 0; i < tags.length; i++) {
-            assertEquals(bookmark.tags[i].value, tags[i]);
+            assertEquals(bookmark.tags[i].value, tags[i].trim());
           }
         }
       },
