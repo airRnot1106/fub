@@ -5,7 +5,7 @@ import type { BookmarkUrl } from "./bookmark-url.ts";
 import type { BookmarkTag } from "./bookmark-tag.ts";
 
 export class Bookmark {
-  constructor(
+  private constructor(
     public readonly id: BookmarkId,
     public readonly title: BookmarkTitle,
     public readonly url: BookmarkUrl,
@@ -72,8 +72,4 @@ export class Bookmark {
 // Repository interface
 export interface BookmarkRepository {
   save(bookmark: Bookmark): Result.ResultAsync<void, Error>;
-  findById(id: BookmarkId): Result.ResultAsync<Bookmark | null, Error>;
-  findAll(): Result.ResultAsync<Bookmark[], Error>;
-  findByTag(tag: BookmarkTag): Result.ResultAsync<Bookmark[], Error>;
-  delete(id: BookmarkId): Result.ResultAsync<void, Error>;
 }
