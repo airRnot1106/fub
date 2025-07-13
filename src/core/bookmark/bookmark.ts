@@ -96,4 +96,5 @@ export class Bookmark {
 // Repository interface
 export interface BookmarkRepository {
   save(bookmark: Bookmark): Result.ResultAsync<void, Error>;
+  findAll(): Result.ResultAsync<Bookmark[], Error>;
 }
