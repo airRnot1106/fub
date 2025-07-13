@@ -22,7 +22,7 @@ const bookmarkUrlGenerator = fc.constantFrom(
 ).map((url) => BookmarkUrl.create(url)).filter(Result.isSuccess).map((r) =>
   r.value
 );
-const bookmarkTagGenerator = fc.string({ minLength: 1, maxLength: 30 }).filter(
+const bookmarkTagGenerator = fc.string({ minLength: 1, maxLength: 50 }).filter(
   (s) => s.trim().length > 0,
 )
   .map((tag) => BookmarkTag.create(tag)).filter(Result.isSuccess).map((r) =>
