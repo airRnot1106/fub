@@ -28,12 +28,19 @@ export class AddBookmark {
       Result.andThen(({ id, title, url, tags }) =>
         Bookmark.create(id, title, url, tags)
       ),
-      Result.andThen((bookmark) =>
+      Result.andThrough((bookmark) =>
         Result.pipe(
-          this.repository.save(bookmark),
-          Result.map(() => bookmark),
+          this.repository.findAll(),
+          Result.map((bookmarks) =>
+            bookmarks.some((existingBookmark) =>
+                existingBookmark.title.equals(bookmark.title)
+              )
+              ? Result.fail("Bookmark with the same title already exists")
+              : Result.succeed()
+          ),
         )
       ),
+      Result.andThrough((bookmark) => this.repository.save(bookmark)),
       Result.mapError((error) => Array.isArray(error) ? error : [error]),
     );
   }
