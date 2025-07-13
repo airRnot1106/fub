@@ -3,12 +3,17 @@ import { assertSpyCall, assertSpyCalls, spy } from "@std/testing/mock";
 import { Result } from "@praha/byethrow";
 import * as fc from "fast-check";
 import { AddBookmark } from "./add-bookmark.ts";
+import { BookmarkRepository } from "../../core/bookmark/bookmark.ts";
 
 // Helper function to create mock repository
 function createMockRepository() {
-  const mockRepository = {
-    save: (): Result.ResultAsync<void, Error> =>
-      Promise.resolve(Result.succeed(undefined)),
+  const mockRepository: BookmarkRepository = {
+    save: () => Promise.resolve(Result.succeed(undefined)),
+    findAll: () => Promise.resolve(Result.succeed([])),
+    findById: () =>
+      Promise.resolve(
+        Result.succeed(null),
+      ),
   };
   return {
     ...mockRepository,
@@ -166,6 +171,11 @@ Deno.test("AddBookmark - should handle repository save failure", async () => {
   const mockRepository = {
     save: (): Result.ResultAsync<void, Error> =>
       Promise.resolve(Result.fail(new Error("Database connection failed"))),
+    findAll: () => Promise.resolve(Result.succeed([])),
+    findById: () =>
+      Promise.resolve(
+        Result.succeed(null),
+      ),
   };
   const repository = {
     ...mockRepository,
