@@ -24,6 +24,19 @@ export class Bookmark {
     return Result.succeed(new Bookmark(id, title, url, tags, now, now));
   }
 
+  static restore(
+    id: BookmarkId,
+    title: BookmarkTitle,
+    url: BookmarkUrl,
+    tags: BookmarkTag[],
+    createdAt: Date,
+    updatedAt: Date,
+  ): Result.Result<Bookmark, Error> {
+    return Result.succeed(
+      new Bookmark(id, title, url, tags, createdAt, updatedAt),
+    );
+  }
+
   equals(other: Bookmark): boolean {
     return this.id.equals(other.id);
   }
