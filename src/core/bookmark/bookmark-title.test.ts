@@ -40,7 +40,7 @@ Deno.test("BookmarkTitle - should reject whitespace-only string", () => {
 Deno.test("BookmarkTitle - should reject too long string", () => {
   fc.assert(
     fc.property(
-      fc.string({ minLength: 501 }),
+      fc.string({ minLength: 501 }).filter((s) => s.trim().length > 500),
       (longTitle) => {
         const result = BookmarkTitle.create(longTitle);
         assertEquals(Result.isFailure(result), true);
