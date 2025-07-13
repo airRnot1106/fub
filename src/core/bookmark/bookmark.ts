@@ -24,7 +24,7 @@ export class Bookmark {
     return Result.succeed(new Bookmark(id, title, url, tags, now, now));
   }
 
-  static restore(
+  static reconstitute(
     id: BookmarkId,
     title: BookmarkTitle,
     url: BookmarkUrl,
