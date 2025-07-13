@@ -80,17 +80,6 @@ export class Bookmark {
       ),
     );
   }
-
-  toJSON() {
-    return {
-      id: this.id.toString(),
-      title: this.title.toString(),
-      url: this.url.toString(),
-      tags: this.tags.map((tag) => tag.toString()),
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
-    };
-  }
 }
 
 // Repository interface
