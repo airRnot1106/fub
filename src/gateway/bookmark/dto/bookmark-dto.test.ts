@@ -9,6 +9,8 @@ describe("BookmarkDto", () => {
     title: fc.string({ minLength: 1 }),
     url: fc.webUrl(),
     tags: fc.array(fc.string({ minLength: 1 })),
+    createdAt: fc.constant(new Date().toISOString()),
+    updatedAt: fc.constant(new Date().toISOString()),
   });
 
   it("should have id property", () => {
@@ -39,6 +41,22 @@ describe("BookmarkDto", () => {
     fc.assert(
       fc.property(arbitraryBookmarkDto, (dto: BookmarkDto) => {
         assertEquals(Array.isArray(dto.tags), true);
+      }),
+    );
+  });
+
+  it("should have createdAt property", () => {
+    fc.assert(
+      fc.property(arbitraryBookmarkDto, (dto: BookmarkDto) => {
+        assertEquals(typeof dto.createdAt, "string");
+      }),
+    );
+  });
+
+  it("should have updatedAt property", () => {
+    fc.assert(
+      fc.property(arbitraryBookmarkDto, (dto: BookmarkDto) => {
+        assertEquals(typeof dto.updatedAt, "string");
       }),
     );
   });
