@@ -53,44 +53,53 @@ Deno.test("BookmarkMapper - should return error for invalid BookmarkDto", () => 
 });
 
 Deno.test("BookmarkMapper - should convert Bookmark domain entity to BookmarkDto", () => {
-  const validDto = {
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    title: "Test Title",
-    url: "https://example.com",
-    tags: ["tag1", "tag2"],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  fc.assert(
+    fc.property(arbitraryValidBookmarkDto, (dtoData: BookmarkDto) => {
+      // First create a valid domain entity from the generated data
+      const idResult = BookmarkId.create(dtoData.id);
+      const titleResult = BookmarkTitle.create(dtoData.title);
+      const urlResult = BookmarkUrl.create(dtoData.url);
 
-  // First create a valid domain entity
-  const idResult = BookmarkId.create(validDto.id);
-  const titleResult = BookmarkTitle.create(validDto.title);
-  const urlResult = BookmarkUrl.create(validDto.url);
-  const tag1Result = BookmarkTag.create(validDto.tags[0]);
-  const tag2Result = BookmarkTag.create(validDto.tags[1]);
+      // Create tags array
+      const tagResults = dtoData.tags.map((tag) => BookmarkTag.create(tag));
+      const allTagsValid = tagResults.every((result) =>
+        Result.isSuccess(result)
+      );
 
-  if (
-    Result.isSuccess(idResult) && Result.isSuccess(titleResult) &&
-    Result.isSuccess(urlResult) && Result.isSuccess(tag1Result) &&
-    Result.isSuccess(tag2Result)
-  ) {
-    const bookmarkResult = Bookmark.reconstitute(
-      idResult.value,
-      titleResult.value,
-      urlResult.value,
-      [tag1Result.value, tag2Result.value],
-      new Date(validDto.createdAt),
-      new Date(validDto.updatedAt),
-    );
+      if (
+        Result.isSuccess(idResult) && Result.isSuccess(titleResult) &&
+        Result.isSuccess(urlResult) && allTagsValid
+      ) {
+        const tags = tagResults.map((result) =>
+          Result.isSuccess(result) ? result.value : null
+        ).filter(Boolean) as BookmarkTag[];
 
-    if (Result.isSuccess(bookmarkResult)) {
-      const dto = BookmarkMapper.toDto(bookmarkResult.value);
-      assertEquals(typeof dto.id, "string");
-      assertEquals(typeof dto.title, "string");
-      assertEquals(typeof dto.url, "string");
-      assertEquals(Array.isArray(dto.tags), true);
-      assertEquals(typeof dto.createdAt, "string");
-      assertEquals(typeof dto.updatedAt, "string");
-    }
-  }
+        const bookmarkResult = Bookmark.reconstitute(
+          idResult.value,
+          titleResult.value,
+          urlResult.value,
+          tags,
+          new Date(dtoData.createdAt),
+          new Date(dtoData.updatedAt),
+        );
+
+        if (Result.isSuccess(bookmarkResult)) {
+          const dto = BookmarkMapper.toDto(bookmarkResult.value);
+
+          // Verify the conversion is correct
+          assertEquals(dto.id, dtoData.id);
+          assertEquals(dto.title, dtoData.title.trim()); // BookmarkTitle trims the input
+          assertEquals(dto.url, dtoData.url);
+          assertEquals(dto.tags.length, dtoData.tags.length);
+          assertEquals(typeof dto.createdAt, "string");
+          assertEquals(typeof dto.updatedAt, "string");
+
+          // Verify arrays match after trimming
+          dto.tags.forEach((tag, index) => {
+            assertEquals(tag, dtoData.tags[index].trim());
+          });
+        }
+      }
+    }),
+  );
 });
