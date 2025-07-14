@@ -35,7 +35,7 @@ export class FileBookmarkRepository implements BookmarkRepository {
 
   findById(
     id: BookmarkId,
-  ): Result.ResultAsync<Bookmark | null, Error> {
+  ): Result.ResultAsync<Bookmark | null, Error[]> {
     return Result.pipe(
       Result.try({
         try: async () => {
@@ -52,30 +52,31 @@ export class FileBookmarkRepository implements BookmarkRepository {
         }
         return BookmarkMapper.toDomain(bookmarkDto);
       }),
-      Result.mapError((errors) => Array.isArray(errors) ? errors[0] : errors),
+      Result.mapError((errors) => Array.isArray(errors) ? errors : [errors]),
     );
   }
 
-  findAll(): Result.ResultAsync<Bookmark[], Error> {
-    return Result.try({
-      try: async () => {
-        const bookmarkDtos = await this.loadBookmarks();
-        const domainResults = bookmarkDtos.map((dto) =>
-          BookmarkMapper.toDomain(dto)
-        );
-        const combinedResult = Result.combine(domainResults);
-
-        if (Result.isSuccess(combinedResult)) {
-          return combinedResult.value;
-        } else {
-          throw Array.isArray(combinedResult.error)
-            ? combinedResult.error[0]
-            : combinedResult.error;
-        }
-      },
-      catch: (error) =>
-        error instanceof Error ? error : new Error(String(error)),
-    })();
+  findAll(): Result.ResultAsync<Bookmark[], Error[]> {
+    return Result.pipe(
+      Result.try({
+        try: async () => {
+          const bookmarkDtos = await this.loadBookmarks();
+          return bookmarkDtos;
+        },
+        catch: (error) =>
+          error instanceof Error ? error : new Error(String(error)),
+      })(),
+      Result.andThen((bookmarkDtos) =>
+        Result.combine(
+          bookmarkDtos.map((bookmarkDto) =>
+            BookmarkMapper.toDomain(bookmarkDto)
+          ),
+        )
+      ),
+      Result.mapError((errors) =>
+        Array.isArray(errors) ? errors.flat() : [errors]
+      ),
+    );
   }
 
   private async ensureDirectoryExists(): Promise<void> {
