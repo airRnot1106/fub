@@ -39,17 +39,85 @@ Deno.test("BookmarkMapper - should convert valid BookmarkDto to Bookmark domain 
 });
 
 Deno.test("BookmarkMapper - should return error for invalid BookmarkDto", () => {
-  const invalidDto = {
-    id: "",
-    title: "",
-    url: "invalid-url",
-    tags: [],
-    createdAt: "invalid-date",
-    updatedAt: "invalid-date",
-  };
+  const arbitraryInvalidBookmarkDto = fc.oneof(
+    // Invalid ID (empty string)
+    fc.record({
+      id: fc.constant(""),
+      title: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      url: fc.webUrl(),
+      tags: fc.array(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      ),
+      createdAt: fc.constant(new Date().toISOString()),
+      updatedAt: fc.constant(new Date().toISOString()),
+    }),
+    // Invalid ID (not UUID format)
+    fc.record({
+      id: fc.string().filter((s) =>
+        !s.match(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        )
+      ),
+      title: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      url: fc.webUrl(),
+      tags: fc.array(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      ),
+      createdAt: fc.constant(new Date().toISOString()),
+      updatedAt: fc.constant(new Date().toISOString()),
+    }),
+    // Invalid title (empty string)
+    fc.record({
+      id: fc.uuid(),
+      title: fc.constant(""),
+      url: fc.webUrl(),
+      tags: fc.array(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      ),
+      createdAt: fc.constant(new Date().toISOString()),
+      updatedAt: fc.constant(new Date().toISOString()),
+    }),
+    // Invalid title (whitespace only)
+    fc.record({
+      id: fc.uuid(),
+      title: fc.string().filter((s) => s.trim().length === 0 && s.length > 0),
+      url: fc.webUrl(),
+      tags: fc.array(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      ),
+      createdAt: fc.constant(new Date().toISOString()),
+      updatedAt: fc.constant(new Date().toISOString()),
+    }),
+    // Invalid URL
+    fc.record({
+      id: fc.uuid(),
+      title: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      url: fc.string().filter((s) => !s.startsWith("http")),
+      tags: fc.array(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      ),
+      createdAt: fc.constant(new Date().toISOString()),
+      updatedAt: fc.constant(new Date().toISOString()),
+    }),
+    // Invalid date format
+    fc.record({
+      id: fc.uuid(),
+      title: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      url: fc.webUrl(),
+      tags: fc.array(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+      ),
+      createdAt: fc.constant("invalid-date"),
+      updatedAt: fc.constant(new Date().toISOString()),
+    }),
+  );
 
-  const result = BookmarkMapper.toDomain(invalidDto);
-  assertEquals(Result.isFailure(result), true);
+  fc.assert(
+    fc.property(arbitraryInvalidBookmarkDto, (invalidDto: BookmarkDto) => {
+      const result = BookmarkMapper.toDomain(invalidDto);
+      assertEquals(Result.isFailure(result), true);
+    }),
+  );
 });
 
 Deno.test("BookmarkMapper - should convert Bookmark domain entity to BookmarkDto", () => {
