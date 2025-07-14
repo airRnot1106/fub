@@ -18,31 +18,14 @@ export class FileBookmarkRepository implements BookmarkRepository {
 
   async save(bookmark: Bookmark): Promise<Result.Result<void, Error>> {
     try {
-      // Ensure directory exists
-      await Deno.mkdir(this.dataDir, { recursive: true });
-
-      // Load existing bookmarks
+      await this.ensureDirectoryExists();
       const existingBookmarks = await this.loadBookmarks();
-
-      // Convert bookmark to DTO
       const bookmarkDto = BookmarkMapper.toDto(bookmark);
-
-      // Find existing bookmark by ID and replace, or add new
-      const existingIndex = existingBookmarks.findIndex((b) =>
-        b.id === bookmarkDto.id
+      const updatedBookmarks = this.upsertBookmark(
+        existingBookmarks,
+        bookmarkDto,
       );
-      if (existingIndex >= 0) {
-        existingBookmarks[existingIndex] = bookmarkDto;
-      } else {
-        existingBookmarks.push(bookmarkDto);
-      }
-
-      // Save to file
-      await Deno.writeTextFile(
-        this.dataFile,
-        JSON.stringify(existingBookmarks, null, 2),
-      );
-
+      await this.saveBookmarks(updatedBookmarks);
       return Result.succeed(undefined);
     } catch (error) {
       return Result.fail(error as Error);
@@ -61,11 +44,10 @@ export class FileBookmarkRepository implements BookmarkRepository {
       }
 
       const domainResult = BookmarkMapper.toDomain(bookmarkDto);
-      if (Result.isFailure(domainResult)) {
-        return Result.fail(new Error("Failed to convert DTO to domain"));
-      }
-
-      return Result.succeed(domainResult.value);
+      return Result.pipe(
+        domainResult,
+        Result.mapError((errors) => Array.isArray(errors) ? errors[0] : errors),
+      );
     } catch (error) {
       return Result.fail(error as Error);
     }
@@ -74,20 +56,22 @@ export class FileBookmarkRepository implements BookmarkRepository {
   async findAll(): Promise<Result.Result<Bookmark[], Error>> {
     try {
       const bookmarkDtos = await this.loadBookmarks();
-      const bookmarks: Bookmark[] = [];
+      const domainResults = bookmarkDtos.map((dto) =>
+        BookmarkMapper.toDomain(dto)
+      );
+      const combinedResult = Result.combine(domainResults);
 
-      for (const dto of bookmarkDtos) {
-        const domainResult = BookmarkMapper.toDomain(dto);
-        if (Result.isFailure(domainResult)) {
-          return Result.fail(new Error("Failed to convert DTO to domain"));
-        }
-        bookmarks.push(domainResult.value);
-      }
-
-      return Result.succeed(bookmarks);
+      return Result.pipe(
+        combinedResult,
+        Result.mapError((errors) => Array.isArray(errors) ? errors[0] : errors),
+      );
     } catch (error) {
       return Result.fail(error as Error);
     }
+  }
+
+  private async ensureDirectoryExists(): Promise<void> {
+    await Deno.mkdir(this.dataDir, { recursive: true });
   }
 
   private async loadBookmarks(): Promise<BookmarkDto[]> {
@@ -100,6 +84,29 @@ export class FileBookmarkRepository implements BookmarkRepository {
         return [];
       }
       throw error;
+    }
+  }
+
+  private async saveBookmarks(bookmarks: BookmarkDto[]): Promise<void> {
+    await Deno.writeTextFile(
+      this.dataFile,
+      JSON.stringify(bookmarks, null, 2),
+    );
+  }
+
+  private upsertBookmark(
+    existingBookmarks: BookmarkDto[],
+    bookmarkDto: BookmarkDto,
+  ): BookmarkDto[] {
+    const existingIndex = existingBookmarks.findIndex((b) =>
+      b.id === bookmarkDto.id
+    );
+
+    if (existingIndex >= 0) {
+      existingBookmarks[existingIndex] = bookmarkDto;
+      return existingBookmarks;
+    } else {
+      return [...existingBookmarks, bookmarkDto];
     }
   }
 }
