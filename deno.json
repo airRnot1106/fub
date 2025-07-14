@@ -9,6 +9,7 @@
     "@cliffy/command": "jsr:@cliffy/command@1.0.0-rc.8",
     "@cliffy/prompt": "jsr:@cliffy/prompt@1.0.0-rc.8",
     "@praha/byethrow": "npm:@praha/byethrow@0.6.0",
-    "fast-check": "npm:fast-check@4.2.0"
+    "fast-check": "npm:fast-check@4.2.0",
+    "date-fns": "npm:date-fns@4.1.0"
   }
 }

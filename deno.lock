@@ -8,6 +8,7 @@
     "jsr:@std/testing@*": "1.0.3",
     "jsr:@std/testing@1": "1.0.3",
     "npm:@praha/byethrow@0.6.0": "0.6.0",
+    "npm:date-fns@4.1.0": "4.1.0",
     "npm:fast-check@4.2.0": "4.2.0"
   },
   "jsr": {
@@ -38,6 +39,9 @@
     "@standard-schema/spec@1.0.0": {
       "integrity": "sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA=="
     },
+    "date-fns@4.1.0": {
+      "integrity": "sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg=="
+    },
     "fast-check@4.2.0": {
       "integrity": "sha512-buxrKEaSseOwFjt6K1REcGMeFOrb0wk3cXifeMAG8yahcE9kV20PjQn1OdzPGL6OBFTbYXfjleNBARf/aCfV1A==",
       "dependencies": [
@@ -55,6 +59,7 @@
       "jsr:@std/assert@1",
       "jsr:@std/testing@1",
       "npm:@praha/byethrow@0.6.0",
+      "npm:date-fns@4.1.0",
       "npm:fast-check@4.2.0"
     ]
   }
