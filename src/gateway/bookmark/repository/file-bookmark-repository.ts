@@ -16,58 +16,68 @@ export class FileBookmarkRepository implements BookmarkRepository {
     this.dataFile = `${dataDir}/bookmarks.json`;
   }
 
-  async save(bookmark: Bookmark): Promise<Result.Result<void, Error>> {
-    try {
-      await this.ensureDirectoryExists();
-      const existingBookmarks = await this.loadBookmarks();
-      const bookmarkDto = BookmarkMapper.toDto(bookmark);
-      const updatedBookmarks = this.upsertBookmark(
-        existingBookmarks,
-        bookmarkDto,
-      );
-      await this.saveBookmarks(updatedBookmarks);
-      return Result.succeed(undefined);
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
-  }
-
-  async findById(
-    id: BookmarkId,
-  ): Promise<Result.Result<Bookmark | null, Error>> {
-    try {
-      const bookmarks = await this.loadBookmarks();
-      const bookmarkDto = bookmarks.find((b) => b.id === id.value);
-
-      if (!bookmarkDto) {
-        return Result.succeed(null);
+  save(bookmark: Bookmark): Result.ResultAsync<void, Error> {
+    return (async () => {
+      try {
+        await this.ensureDirectoryExists();
+        const existingBookmarks = await this.loadBookmarks();
+        const bookmarkDto = BookmarkMapper.toDto(bookmark);
+        const updatedBookmarks = this.upsertBookmark(
+          existingBookmarks,
+          bookmarkDto,
+        );
+        await this.saveBookmarks(updatedBookmarks);
+        return Result.succeed(undefined);
+      } catch (error) {
+        return Result.fail(error as Error);
       }
-
-      const domainResult = BookmarkMapper.toDomain(bookmarkDto);
-      return Result.pipe(
-        domainResult,
-        Result.mapError((errors) => Array.isArray(errors) ? errors[0] : errors),
-      );
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
+    })();
   }
 
-  async findAll(): Promise<Result.Result<Bookmark[], Error>> {
-    try {
-      const bookmarkDtos = await this.loadBookmarks();
-      const domainResults = bookmarkDtos.map((dto) =>
-        BookmarkMapper.toDomain(dto)
-      );
-      const combinedResult = Result.combine(domainResults);
+  findById(
+    id: BookmarkId,
+  ): Result.ResultAsync<Bookmark | null, Error> {
+    return (async () => {
+      try {
+        const bookmarks = await this.loadBookmarks();
+        const bookmarkDto = bookmarks.find((b) => b.id === id.value);
 
-      return Result.pipe(
-        combinedResult,
-        Result.mapError((errors) => Array.isArray(errors) ? errors[0] : errors),
-      );
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
+        if (!bookmarkDto) {
+          return Result.succeed(null);
+        }
+
+        const domainResult = BookmarkMapper.toDomain(bookmarkDto);
+        return Result.pipe(
+          domainResult,
+          Result.mapError((errors) =>
+            Array.isArray(errors) ? errors[0] : errors
+          ),
+        );
+      } catch (error) {
+        return Result.fail(error as Error);
+      }
+    })();
+  }
+
+  findAll(): Result.ResultAsync<Bookmark[], Error> {
+    return (async () => {
+      try {
+        const bookmarkDtos = await this.loadBookmarks();
+        const domainResults = bookmarkDtos.map((dto) =>
+          BookmarkMapper.toDomain(dto)
+        );
+        const combinedResult = Result.combine(domainResults);
+
+        return Result.pipe(
+          combinedResult,
+          Result.mapError((errors) =>
+            Array.isArray(errors) ? errors[0] : errors
+          ),
+        );
+      } catch (error) {
+        return Result.fail(error as Error);
+      }
+    })();
   }
 
   private async ensureDirectoryExists(): Promise<void> {
