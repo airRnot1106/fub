@@ -78,11 +78,13 @@ export function createMockRepository() {
       Promise.resolve(
         Result.succeed(null),
       ),
+    remove: () => Promise.resolve(Result.succeed(undefined)),
   };
   return {
     ...mockRepository,
     save: spy(mockRepository, "save"),
     findById: spy(mockRepository, "findById"),
+    remove: spy(mockRepository, "remove"),
   };
 }
 
@@ -140,10 +142,13 @@ export function createFailingMockRepository(errorMessage: string) {
       Promise.resolve(
         Result.succeed(null),
       ),
+    remove: (): Result.ResultAsync<void, Error> =>
+      Promise.resolve(Result.fail(new Error(errorMessage))),
   };
   return {
     ...mockRepository,
     save: spy(mockRepository, "save"),
     findById: spy(mockRepository, "findById"),
+    remove: spy(mockRepository, "remove"),
   };
 }

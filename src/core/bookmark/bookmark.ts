@@ -87,4 +87,5 @@ export interface BookmarkRepository {
   save(bookmark: Bookmark): Result.ResultAsync<void, Error>;
   findAll(): Result.ResultAsync<Bookmark[], Error[]>;
   findById(id: BookmarkId): Result.ResultAsync<Bookmark | null, Error[]>;
+  remove(id: BookmarkId): Result.ResultAsync<void, Error>;
 }

@@ -79,6 +79,29 @@ export class FileBookmarkRepository implements BookmarkRepository {
     );
   }
 
+  remove(id: BookmarkId): Result.ResultAsync<void, Error> {
+    return Result.try({
+      try: async () => {
+        await this.ensureDirectoryExists();
+        const existingBookmarks = await this.loadBookmarks();
+        const bookmarkIndex = existingBookmarks.findIndex((b) =>
+          b.id === id.value
+        );
+
+        if (bookmarkIndex === -1) {
+          throw new Error("Bookmark not found");
+        }
+
+        const updatedBookmarks = existingBookmarks.filter((b) =>
+          b.id !== id.value
+        );
+        await this.saveBookmarks(updatedBookmarks);
+      },
+      catch: (error) =>
+        error instanceof Error ? error : new Error(String(error)),
+    })();
+  }
+
   private async ensureDirectoryExists(): Promise<void> {
     await Deno.mkdir(this.dataDir, { recursive: true });
   }
