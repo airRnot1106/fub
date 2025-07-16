@@ -4,72 +4,22 @@ import * as fc from "fast-check";
 import { EditBookmark } from "./edit-bookmark.ts";
 import { FileBookmarkRepository } from "../../gateway/bookmark/repository/file-bookmark-repository.ts";
 import { BookmarkId } from "../../core/bookmark/bookmark-id.ts";
-import { BookmarkTitle } from "../../core/bookmark/bookmark-title.ts";
-import { BookmarkUrl } from "../../core/bookmark/bookmark-url.ts";
-import { BookmarkTag } from "../../core/bookmark/bookmark-tag.ts";
-import { Bookmark } from "../../core/bookmark/bookmark.ts";
-
-// Helper function to create a bookmark
-function createBookmark(
-  id: BookmarkId,
-  title: string,
-  url: string,
-  tags: string[],
-): Bookmark {
-  const bookmarkTitle = BookmarkTitle.create(title);
-  const bookmarkUrl = BookmarkUrl.create(url);
-  const bookmarkTags = tags.map((tag) => BookmarkTag.create(tag));
-
-  if (Result.isFailure(bookmarkTitle)) throw new Error("Invalid title");
-  if (Result.isFailure(bookmarkUrl)) throw new Error("Invalid url");
-  if (bookmarkTags.some((tag) => Result.isFailure(tag))) {
-    throw new Error("Invalid tag");
-  }
-
-  const validTags = bookmarkTags.map((tag) => {
-    if (Result.isFailure(tag)) throw new Error("Invalid tag");
-    return tag.value;
-  });
-  const bookmark = Bookmark.create(
-    id,
-    bookmarkTitle.value,
-    bookmarkUrl.value,
-    validTags,
-  );
-
-  if (Result.isFailure(bookmark)) throw new Error("Invalid bookmark");
-  return bookmark.value;
-}
-
-// Helper to create temp directory
-async function createTempDirectory(): Promise<string> {
-  const tempDir = await Deno.makeTempDir({ prefix: "bkm_test_" });
-  return tempDir;
-}
+import {
+  createBookmark,
+  createTempDirectory,
+  generators,
+  testConfig,
+} from "../../core/bookmark/mocks.ts";
 
 Deno.test("EditBookmark Integration - should update bookmark in file system", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.validTitle(),
+      generators.validTags(),
       async (idValue, url, originalTitle, originalTags, newTitle, newTags) => {
         const tempDir = await createTempDirectory();
         const repository = new FileBookmarkRepository(tempDir);
@@ -131,24 +81,17 @@ Deno.test("EditBookmark Integration - should update bookmark in file system", as
         }
       },
     ),
-    { numRuns: 5 },
+    { numRuns: testConfig.numRuns.integration },
   );
 });
 
 Deno.test("EditBookmark Integration - should fail when bookmark does not exist in file system", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
       async (idValue, url, title, tags) => {
         const tempDir = await createTempDirectory();
         const repository = new FileBookmarkRepository(tempDir);
@@ -163,7 +106,7 @@ Deno.test("EditBookmark Integration - should fail when bookmark does not exist i
         }
       },
     ),
-    { numRuns: 5 },
+    { numRuns: testConfig.numRuns.integration },
   );
 });
 

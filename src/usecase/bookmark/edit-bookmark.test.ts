@@ -4,83 +4,23 @@ import { Result } from "@praha/byethrow";
 import * as fc from "fast-check";
 import { EditBookmark } from "./edit-bookmark.ts";
 import { BookmarkId } from "../../core/bookmark/bookmark-id.ts";
-import { BookmarkTitle } from "../../core/bookmark/bookmark-title.ts";
-import { BookmarkUrl } from "../../core/bookmark/bookmark-url.ts";
-import { BookmarkTag } from "../../core/bookmark/bookmark-tag.ts";
-import { Bookmark } from "../../core/bookmark/bookmark.ts";
-
-// Helper function to create mock repository
-function createMockRepository() {
-  const mockRepository = {
-    save: () => Promise.resolve(Result.succeed(undefined)),
-    findAll: () => Promise.resolve(Result.succeed([])),
-    findById: () =>
-      Promise.resolve(
-        Result.succeed(null),
-      ),
-  };
-  return {
-    ...mockRepository,
-    save: spy(mockRepository, "save"),
-    findById: spy(mockRepository, "findById"),
-  };
-}
-
-// Helper function to create a bookmark
-function createBookmark(
-  id: BookmarkId,
-  title: string,
-  url: string,
-  tags: string[],
-): Bookmark {
-  const bookmarkTitle = BookmarkTitle.create(title);
-  const bookmarkUrl = BookmarkUrl.create(url);
-  const bookmarkTags = tags.map((tag) => BookmarkTag.create(tag));
-
-  if (Result.isFailure(bookmarkTitle)) throw new Error("Invalid title");
-  if (Result.isFailure(bookmarkUrl)) throw new Error("Invalid url");
-  if (bookmarkTags.some((tag) => Result.isFailure(tag))) {
-    throw new Error("Invalid tag");
-  }
-
-  const validTags = bookmarkTags.map((tag) => {
-    if (Result.isFailure(tag)) throw new Error("Invalid tag");
-    return tag.value;
-  });
-  const bookmark = Bookmark.create(
-    id,
-    bookmarkTitle.value,
-    bookmarkUrl.value,
-    validTags,
-  );
-
-  if (Result.isFailure(bookmark)) throw new Error("Invalid bookmark");
-  return bookmark.value;
-}
+import {
+  createBookmark,
+  createFailingMockRepository,
+  createMockRepository,
+  generators,
+  testConfig,
+} from "../../core/bookmark/mocks.ts";
 
 Deno.test("EditBookmark - should update bookmark successfully", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.validTitle(),
+      generators.validTags(),
       async (
         idValue,
         originalUrl,
@@ -136,24 +76,17 @@ Deno.test("EditBookmark - should update bookmark successfully", async () => {
         }
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("EditBookmark - should fail when bookmark not found", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
       async (idValue, url, title, tags) => {
         const repository = createMockRepository();
         const editBookmark = new EditBookmark(repository);
@@ -174,29 +107,18 @@ Deno.test("EditBookmark - should fail when bookmark not found", async () => {
         assertSpyCalls(repository.save, 0);
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("EditBookmark - should fail with invalid title", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.oneof(
-        fc.constant(""),
-        fc.string().filter((s) => s.trim().length === 0),
-        fc.string({ minLength: 501 }),
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.invalidTitle(),
       async (idValue, url, originalTitle, originalTags, invalidTitle) => {
         const repository = createMockRepository();
         const editBookmark = new EditBookmark(repository);
@@ -230,31 +152,18 @@ Deno.test("EditBookmark - should fail with invalid title", async () => {
         assertSpyCalls(repository.save, 0);
       },
     ),
-    { numRuns: 20 },
+    { numRuns: testConfig.numRuns.invalid },
   );
 });
 
 Deno.test("EditBookmark - should fail with invalid tags", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.oneof(
-        fc.array(fc.constant(""), { minLength: 1 }),
-        fc.array(fc.string().filter((s) => s.trim().length === 0), {
-          minLength: 1,
-        }),
-        fc.array(fc.string({ minLength: 51 }), { minLength: 1 }),
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.invalidTags(),
       async (idValue, url, title, originalTags, invalidTags) => {
         const repository = createMockRepository();
         const editBookmark = new EditBookmark(repository);
@@ -288,24 +197,12 @@ Deno.test("EditBookmark - should fail with invalid tags", async () => {
         assertSpyCalls(repository.save, 0);
       },
     ),
-    { numRuns: 20 },
+    { numRuns: testConfig.numRuns.invalid },
   );
 });
 
 Deno.test("EditBookmark - should handle repository save failure", async () => {
-  const mockRepository = {
-    save: (): Result.ResultAsync<void, Error> =>
-      Promise.resolve(Result.fail(new Error("Database connection failed"))),
-    findAll: () => Promise.resolve(Result.succeed([])),
-    findById: (): Result.ResultAsync<Bookmark | null, Error[]> =>
-      Promise.resolve(Result.succeed(null)),
-  };
-
-  const repository = {
-    ...mockRepository,
-    save: spy(mockRepository, "save"),
-    findById: spy(mockRepository, "findById"),
-  };
+  const repository = createFailingMockRepository("Database connection failed");
 
   const editBookmark = new EditBookmark(repository);
 
@@ -338,20 +235,14 @@ Deno.test("EditBookmark - should handle repository save failure", async () => {
 Deno.test("EditBookmark - should handle empty tags update", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
       fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
+        generators.validTag(),
         { minLength: 1, maxLength: 10 },
       ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
+      generators.validTitle(),
       async (idValue, url, originalTitle, originalTags, newTitle) => {
         const repository = createMockRepository();
         const editBookmark = new EditBookmark(repository);
@@ -391,27 +282,18 @@ Deno.test("EditBookmark - should handle empty tags update", async () => {
         assertSpyCalls(repository.save, 1);
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("EditBookmark - should preserve createdAt timestamp", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.validTitle(),
       async (idValue, url, originalTitle, originalTags, newTitle) => {
         const repository = createMockRepository();
         const editBookmark = new EditBookmark(repository);
@@ -458,34 +340,20 @@ Deno.test("EditBookmark - should preserve createdAt timestamp", async () => {
         assertSpyCalls(repository.save, 1);
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("EditBookmark - should trim whitespace from updated inputs", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.string({ minLength: 1 }),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.string().filter((s) => s.length > 0 && s.trim() === ""),
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.whitespace(),
       async (
         idValue,
         url,
@@ -538,6 +406,6 @@ Deno.test("EditBookmark - should trim whitespace from updated inputs", async () 
         assertSpyCalls(repository.save, 1);
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });

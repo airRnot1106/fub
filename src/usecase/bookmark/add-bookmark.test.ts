@@ -1,39 +1,21 @@
 import { assertEquals } from "@std/assert";
-import { assertSpyCall, assertSpyCalls, spy } from "@std/testing/mock";
+import { assertSpyCall, assertSpyCalls } from "@std/testing/mock";
 import { Result } from "@praha/byethrow";
 import * as fc from "fast-check";
 import { AddBookmark } from "./add-bookmark.ts";
-import { BookmarkRepository } from "../../core/bookmark/bookmark.ts";
-
-// Helper function to create mock repository
-function createMockRepository() {
-  const mockRepository: BookmarkRepository = {
-    save: () => Promise.resolve(Result.succeed(undefined)),
-    findAll: () => Promise.resolve(Result.succeed([])),
-    findById: () =>
-      Promise.resolve(
-        Result.succeed(null),
-      ),
-  };
-  return {
-    ...mockRepository,
-    save: spy(mockRepository, "save"),
-  };
-}
+import {
+  createFailingMockRepository,
+  createMockRepository,
+  generators,
+  testConfig,
+} from "../../core/bookmark/mocks.ts";
 
 Deno.test("AddBookmark - should create and save bookmark successfully", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
       async (url, title, tags) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -59,17 +41,15 @@ Deno.test("AddBookmark - should create and save bookmark successfully", async ()
         }
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("AddBookmark - should handle empty tags", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
+      generators.validUrl(),
+      generators.validTitle(),
       async (url, title) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -85,23 +65,15 @@ Deno.test("AddBookmark - should handle empty tags", async () => {
         }
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("AddBookmark - should fail with invalid URL", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.oneof(
-        fc.constant(""),
-        fc.string().filter((s) => !s.match(/^https?:\/\//)),
-        fc.string({ minLength: 1 }).map((s) => `ftp://${s}`),
-        fc.string({ minLength: 1 }).map((s) => `javascript:${s}`),
-        fc.string().filter((s) => s.includes(" ") && !s.match(/^https?:\/\//)),
-      ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
+      generators.invalidUrls(),
+      generators.validTitle(),
       async (invalidUrl, title) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -112,19 +84,15 @@ Deno.test("AddBookmark - should fail with invalid URL", async () => {
         assertSpyCalls(repository.save, 0);
       },
     ),
-    { numRuns: 20 },
+    { numRuns: testConfig.numRuns.invalid },
   );
 });
 
 Deno.test("AddBookmark - should fail with invalid title", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.webUrl(),
-      fc.oneof(
-        fc.constant(""),
-        fc.string().filter((s) => s.trim().length === 0),
-        fc.string({ minLength: 501 }),
-      ),
+      generators.validUrl(),
+      generators.invalidTitle(),
       async (url, invalidTitle) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -135,24 +103,16 @@ Deno.test("AddBookmark - should fail with invalid title", async () => {
         assertSpyCalls(repository.save, 0);
       },
     ),
-    { numRuns: 20 },
+    { numRuns: testConfig.numRuns.invalid },
   );
 });
 
 Deno.test("AddBookmark - should fail with invalid tags", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.oneof(
-        fc.array(fc.constant(""), { minLength: 1 }),
-        fc.array(fc.string().filter((s) => s.trim().length === 0), {
-          minLength: 1,
-        }),
-        fc.array(fc.string({ minLength: 51 }), { minLength: 1 }),
-      ),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.invalidTags(),
       async (url, title, invalidTags) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -163,24 +123,12 @@ Deno.test("AddBookmark - should fail with invalid tags", async () => {
         assertSpyCalls(repository.save, 0);
       },
     ),
-    { numRuns: 20 },
+    { numRuns: testConfig.numRuns.invalid },
   );
 });
 
 Deno.test("AddBookmark - should handle repository save failure", async () => {
-  const mockRepository = {
-    save: (): Result.ResultAsync<void, Error> =>
-      Promise.resolve(Result.fail(new Error("Database connection failed"))),
-    findAll: () => Promise.resolve(Result.succeed([])),
-    findById: () =>
-      Promise.resolve(
-        Result.succeed(null),
-      ),
-  };
-  const repository = {
-    ...mockRepository,
-    save: spy(mockRepository, "save"),
-  };
+  const repository = createFailingMockRepository("Database connection failed");
 
   const addBookmark = new AddBookmark(repository);
 
@@ -197,26 +145,12 @@ Deno.test("AddBookmark - should handle repository save failure", async () => {
 Deno.test("AddBookmark - should generate unique IDs", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.webUrl(),
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
+      generators.validUrl(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.validTags(),
       async (url1, url2, title1, title2, tags1, tags2) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -234,24 +168,17 @@ Deno.test("AddBookmark - should generate unique IDs", async () => {
         assertSpyCalls(repository.save, 2);
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
 Deno.test("AddBookmark - should trim whitespace from inputs", async () => {
   await fc.assert(
     fc.asyncProperty(
-      fc.webUrl(),
-      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
-        s.trim().length > 0
-      ),
-      fc.array(
-        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
-          s.trim().length > 0
-        ),
-        { maxLength: 10 },
-      ),
-      fc.string().filter((s) => s.length > 0 && s.trim() === ""),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.whitespace(),
       async (url, title, tags, padding) => {
         const repository = createMockRepository();
         const addBookmark = new AddBookmark(repository);
@@ -278,6 +205,6 @@ Deno.test("AddBookmark - should trim whitespace from inputs", async () => {
         }
       },
     ),
-    { numRuns: 10 },
+    { numRuns: testConfig.numRuns.normal },
   );
 });
