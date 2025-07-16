@@ -2,6 +2,7 @@ import { Result } from "@praha/byethrow";
 import { Bookmark, BookmarkRepository } from "../../core/bookmark/bookmark.ts";
 import { BookmarkId } from "../../core/bookmark/bookmark-id.ts";
 import { BookmarkTitle } from "../../core/bookmark/bookmark-title.ts";
+import { BookmarkUrl } from "../../core/bookmark/bookmark-url.ts";
 import { BookmarkTag } from "../../core/bookmark/bookmark-tag.ts";
 
 export class EditBookmark {
@@ -9,7 +10,7 @@ export class EditBookmark {
 
   execute(
     idString: string,
-    _urlString: string,
+    urlString: string,
     titleString: string,
     tagStrings: string[],
   ): Result.ResultAsync<Bookmark, Error[]> {
@@ -17,6 +18,7 @@ export class EditBookmark {
       Result.do(),
       Result.bind("id", () => BookmarkId.create(idString)),
       Result.bind("title", () => BookmarkTitle.create(titleString)),
+      Result.bind("url", () => BookmarkUrl.create(urlString)),
       Result.bind(
         "tags",
         () =>
@@ -24,7 +26,7 @@ export class EditBookmark {
             tagStrings.map((tagString) => BookmarkTag.create(tagString)),
           ),
       ),
-      Result.andThen(({ id, title, tags }) =>
+      Result.andThen(({ id, title, url, tags }) =>
         Result.pipe(
           this.repository.findById(id),
           Result.andThen((existingBookmark) => {
@@ -32,11 +34,11 @@ export class EditBookmark {
               return Result.fail(new Error("Bookmark not found"));
             }
 
-            // Create updated bookmark with new title and tags, but keep original URL and timestamps
+            // Create updated bookmark with new title, URL, and tags
             const updatedBookmark = Bookmark.reconstitute(
               existingBookmark.id,
               title,
-              existingBookmark.url,
+              url,
               tags,
               existingBookmark.createdAt,
               new Date(), // Update updatedAt to current time

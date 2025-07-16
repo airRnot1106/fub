@@ -232,6 +232,54 @@ Deno.test("EditBookmark - should handle repository save failure", async () => {
   assertSpyCalls(repository.save, 1);
 });
 
+Deno.test("EditBookmark - should update URL successfully", async () => {
+  const repository = createMockRepository();
+  const editBookmark = new EditBookmark(repository);
+
+  const id = BookmarkId.create("test-id");
+  if (Result.isFailure(id)) return;
+
+  const originalBookmark = createBookmark(
+    id.value,
+    "Original Title",
+    "https://original.com",
+    ["tag1"],
+  );
+
+  const mockFindById = spy(() =>
+    Promise.resolve(Result.succeed(originalBookmark))
+  );
+  // deno-lint-ignore no-explicit-any
+  (repository as any).findById = mockFindById;
+
+  const result = await editBookmark.execute(
+    "test-id",
+    "https://updated.com",
+    "Original Title",
+    ["tag1"],
+  );
+
+  assertEquals(Result.isSuccess(result), true);
+
+  if (Result.isSuccess(result)) {
+    const updatedBookmark = result.value;
+
+    assertEquals(updatedBookmark.id.equals(id.value), true);
+    assertEquals(updatedBookmark.title.value, "Original Title");
+    // We want URL to be updated, not kept as original
+    assertEquals(
+      updatedBookmark.url.value,
+      "https://updated.com",
+      "URL should be updated",
+    );
+    assertEquals(updatedBookmark.tags.length, 1);
+    assertEquals(updatedBookmark.tags[0].value, "tag1");
+  }
+
+  assertSpyCalls(repository.findById, 1);
+  assertSpyCalls(repository.save, 1);
+});
+
 Deno.test("EditBookmark - should handle empty tags update", async () => {
   await fc.assert(
     fc.asyncProperty(
