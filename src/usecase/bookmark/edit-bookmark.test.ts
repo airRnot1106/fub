@@ -334,3 +334,210 @@ Deno.test("EditBookmark - should handle repository save failure", async () => {
   assertSpyCalls(repository.findById, 1);
   assertSpyCalls(repository.save, 1);
 });
+
+Deno.test("EditBookmark - should handle empty tags update", async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      fc.string({ minLength: 1 }),
+      fc.webUrl(),
+      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
+        s.trim().length > 0
+      ),
+      fc.array(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
+          s.trim().length > 0
+        ),
+        { minLength: 1, maxLength: 10 },
+      ),
+      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
+        s.trim().length > 0
+      ),
+      async (idValue, url, originalTitle, originalTags, newTitle) => {
+        const repository = createMockRepository();
+        const editBookmark = new EditBookmark(repository);
+
+        const id = BookmarkId.create(idValue);
+        if (Result.isFailure(id)) return;
+
+        const originalBookmark = createBookmark(
+          id.value,
+          originalTitle,
+          url,
+          originalTags,
+        );
+
+        const mockFindById = spy(() =>
+          Promise.resolve(Result.succeed(originalBookmark))
+        );
+        // deno-lint-ignore no-explicit-any
+        (repository as any).findById = mockFindById;
+
+        const result = await editBookmark.execute(
+          idValue,
+          url,
+          newTitle,
+          [], // Empty tags
+        );
+
+        assertEquals(Result.isSuccess(result), true);
+
+        if (Result.isSuccess(result)) {
+          const updatedBookmark = result.value;
+          assertEquals(updatedBookmark.tags.length, 0);
+          assertEquals(updatedBookmark.title.value, newTitle.trim());
+        }
+
+        assertSpyCalls(repository.findById, 1);
+        assertSpyCalls(repository.save, 1);
+      },
+    ),
+    { numRuns: 10 },
+  );
+});
+
+Deno.test("EditBookmark - should preserve createdAt timestamp", async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      fc.string({ minLength: 1 }),
+      fc.webUrl(),
+      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
+        s.trim().length > 0
+      ),
+      fc.array(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
+          s.trim().length > 0
+        ),
+        { maxLength: 10 },
+      ),
+      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
+        s.trim().length > 0
+      ),
+      async (idValue, url, originalTitle, originalTags, newTitle) => {
+        const repository = createMockRepository();
+        const editBookmark = new EditBookmark(repository);
+
+        const id = BookmarkId.create(idValue);
+        if (Result.isFailure(id)) return;
+
+        const originalBookmark = createBookmark(
+          id.value,
+          originalTitle,
+          url,
+          originalTags,
+        );
+
+        const mockFindById = spy(() =>
+          Promise.resolve(Result.succeed(originalBookmark))
+        );
+        // deno-lint-ignore no-explicit-any
+        (repository as any).findById = mockFindById;
+
+        const result = await editBookmark.execute(
+          idValue,
+          url,
+          newTitle,
+          originalTags,
+        );
+
+        assertEquals(Result.isSuccess(result), true);
+
+        if (Result.isSuccess(result)) {
+          const updatedBookmark = result.value;
+          assertEquals(
+            updatedBookmark.createdAt.getTime(),
+            originalBookmark.createdAt.getTime(),
+          );
+          assertEquals(
+            updatedBookmark.updatedAt.getTime() >
+              originalBookmark.updatedAt.getTime(),
+            true,
+          );
+        }
+
+        assertSpyCalls(repository.findById, 1);
+        assertSpyCalls(repository.save, 1);
+      },
+    ),
+    { numRuns: 10 },
+  );
+});
+
+Deno.test("EditBookmark - should trim whitespace from updated inputs", async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      fc.string({ minLength: 1 }),
+      fc.webUrl(),
+      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
+        s.trim().length > 0
+      ),
+      fc.array(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
+          s.trim().length > 0
+        ),
+        { maxLength: 10 },
+      ),
+      fc.string({ minLength: 1, maxLength: 500 }).filter((s) =>
+        s.trim().length > 0
+      ),
+      fc.array(
+        fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
+          s.trim().length > 0
+        ),
+        { maxLength: 10 },
+      ),
+      fc.string().filter((s) => s.length > 0 && s.trim() === ""),
+      async (
+        idValue,
+        url,
+        originalTitle,
+        originalTags,
+        newTitle,
+        newTags,
+        padding,
+      ) => {
+        const repository = createMockRepository();
+        const editBookmark = new EditBookmark(repository);
+
+        const id = BookmarkId.create(idValue);
+        if (Result.isFailure(id)) return;
+
+        const originalBookmark = createBookmark(
+          id.value,
+          originalTitle,
+          url,
+          originalTags,
+        );
+
+        const mockFindById = spy(() =>
+          Promise.resolve(Result.succeed(originalBookmark))
+        );
+        // deno-lint-ignore no-explicit-any
+        (repository as any).findById = mockFindById;
+
+        const paddedTitle = padding + newTitle + padding;
+        const paddedTags = newTags.map((tag) => padding + tag + padding);
+
+        const result = await editBookmark.execute(
+          idValue,
+          url,
+          paddedTitle,
+          paddedTags,
+        );
+
+        assertEquals(Result.isSuccess(result), true);
+
+        if (Result.isSuccess(result)) {
+          const updatedBookmark = result.value;
+          assertEquals(updatedBookmark.title.value, newTitle.trim());
+          for (let i = 0; i < newTags.length; i++) {
+            assertEquals(updatedBookmark.tags[i].value, newTags[i].trim());
+          }
+        }
+
+        assertSpyCalls(repository.findById, 1);
+        assertSpyCalls(repository.save, 1);
+      },
+    ),
+    { numRuns: 10 },
+  );
+});
