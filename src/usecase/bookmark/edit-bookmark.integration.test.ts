@@ -18,9 +18,18 @@ Deno.test("EditBookmark Integration - should update bookmark in file system", as
       generators.validUrl(),
       generators.validTitle(),
       generators.validTags(),
+      generators.validUrl(),
       generators.validTitle(),
       generators.validTags(),
-      async (idValue, url, originalTitle, originalTags, newTitle, newTags) => {
+      async (
+        idValue,
+        originalUrl,
+        originalTitle,
+        originalTags,
+        newUrl,
+        newTitle,
+        newTags,
+      ) => {
         const tempDir = await createTempDirectory();
         const repository = new FileBookmarkRepository(tempDir);
         const editBookmark = new EditBookmark(repository);
@@ -33,7 +42,7 @@ Deno.test("EditBookmark Integration - should update bookmark in file system", as
           const originalBookmark = createBookmark(
             id.value,
             originalTitle,
-            url,
+            originalUrl,
             originalTags,
           );
 
@@ -43,7 +52,7 @@ Deno.test("EditBookmark Integration - should update bookmark in file system", as
           // Update the bookmark
           const updateResult = await editBookmark.execute(
             idValue,
-            url,
+            newUrl,
             newTitle,
             newTags,
           );
@@ -56,7 +65,7 @@ Deno.test("EditBookmark Integration - should update bookmark in file system", as
             // Verify update
             assertEquals(updatedBookmark.id.equals(id.value), true);
             assertEquals(updatedBookmark.title.value, newTitle.trim());
-            assertEquals(updatedBookmark.url.value, url.trim());
+            assertEquals(updatedBookmark.url.value, newUrl.trim());
             assertEquals(updatedBookmark.tags.length, newTags.length);
 
             // Verify persistence
@@ -66,6 +75,7 @@ Deno.test("EditBookmark Integration - should update bookmark in file system", as
             if (Result.isSuccess(findResult) && findResult.value) {
               const persistedBookmark = findResult.value;
               assertEquals(persistedBookmark.title.value, newTitle.trim());
+              assertEquals(persistedBookmark.url.value, newUrl.trim());
               assertEquals(persistedBookmark.tags.length, newTags.length);
               for (let i = 0; i < newTags.length; i++) {
                 assertEquals(

@@ -280,6 +280,118 @@ Deno.test("EditBookmark - should update URL successfully", async () => {
   assertSpyCalls(repository.save, 1);
 });
 
+Deno.test("EditBookmark - should fail with invalid URL", async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.invalidUrls(),
+      async (idValue, originalUrl, originalTitle, originalTags, invalidUrl) => {
+        const repository = createMockRepository();
+        const editBookmark = new EditBookmark(repository);
+
+        const id = BookmarkId.create(idValue);
+        if (Result.isFailure(id)) return;
+
+        const originalBookmark = createBookmark(
+          id.value,
+          originalTitle,
+          originalUrl,
+          originalTags,
+        );
+
+        const mockFindById = spy(() =>
+          Promise.resolve(Result.succeed(originalBookmark))
+        );
+        // deno-lint-ignore no-explicit-any
+        (repository as any).findById = mockFindById;
+
+        const result = await editBookmark.execute(
+          idValue,
+          invalidUrl,
+          originalTitle,
+          originalTags,
+        );
+
+        assertEquals(Result.isFailure(result), true);
+
+        assertSpyCalls(repository.findById, 1);
+        assertSpyCalls(repository.save, 0);
+      },
+    ),
+    { numRuns: testConfig.numRuns.invalid },
+  );
+});
+
+Deno.test("EditBookmark - should update all fields simultaneously", async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      generators.validId(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      generators.validUrl(),
+      generators.validTitle(),
+      generators.validTags(),
+      async (
+        idValue,
+        originalUrl,
+        originalTitle,
+        originalTags,
+        newUrl,
+        newTitle,
+        newTags,
+      ) => {
+        const repository = createMockRepository();
+        const editBookmark = new EditBookmark(repository);
+
+        const id = BookmarkId.create(idValue);
+        if (Result.isFailure(id)) return;
+
+        const originalBookmark = createBookmark(
+          id.value,
+          originalTitle,
+          originalUrl,
+          originalTags,
+        );
+
+        const mockFindById = spy(() =>
+          Promise.resolve(Result.succeed(originalBookmark))
+        );
+        // deno-lint-ignore no-explicit-any
+        (repository as any).findById = mockFindById;
+
+        const result = await editBookmark.execute(
+          idValue,
+          newUrl,
+          newTitle,
+          newTags,
+        );
+
+        assertEquals(Result.isSuccess(result), true);
+
+        if (Result.isSuccess(result)) {
+          const updatedBookmark = result.value;
+
+          assertEquals(updatedBookmark.id.equals(id.value), true);
+          assertEquals(updatedBookmark.title.value, newTitle.trim());
+          assertEquals(updatedBookmark.url.value, newUrl.trim());
+          assertEquals(updatedBookmark.tags.length, newTags.length);
+          for (let i = 0; i < newTags.length; i++) {
+            assertEquals(updatedBookmark.tags[i].value, newTags[i].trim());
+          }
+        }
+
+        assertSpyCalls(repository.findById, 1);
+        assertSpyCalls(repository.save, 1);
+      },
+    ),
+    { numRuns: testConfig.numRuns.normal },
+  );
+});
+
 Deno.test("EditBookmark - should handle empty tags update", async () => {
   await fc.assert(
     fc.asyncProperty(
