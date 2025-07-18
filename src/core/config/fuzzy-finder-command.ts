@@ -12,7 +12,9 @@ export class FuzzyFinderCommand implements ValueObject<string> {
 
     // Security validation - reject dangerous characters
     if (/[&|;$`(){}[\]<>'"\\]/.test(command)) {
-      return Result.fail(new Error(`Invalid FuzzyFinderCommand format: ${command}`));
+      return Result.fail(
+        new Error(`Invalid FuzzyFinderCommand format: ${command}`),
+      );
     }
 
     return Result.succeed(new FuzzyFinderCommand(command));

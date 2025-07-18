@@ -13,22 +13,22 @@ export const generators = {
   // Valid value generators
   validConfigKey: () =>
     fc.array(
-      fc.string({ minLength: 1, maxLength: 20 }).filter(s => 
+      fc.string({ minLength: 1, maxLength: 20 }).filter((s) =>
         /^[a-zA-Z][a-zA-Z0-9]*$/.test(s)
       ),
-      { minLength: 1, maxLength: 5 }
-    ).map(segments => segments.join(".")),
-  
+      { minLength: 1, maxLength: 5 },
+    ).map((segments) => segments.join(".")),
+
   validCommand: () =>
-    fc.string({ minLength: 1, maxLength: 50 }).filter(s => 
+    fc.string({ minLength: 1, maxLength: 50 }).filter((s) =>
       /^[a-zA-Z0-9_-]+$/.test(s)
     ),
-  
+
   validArgs: () =>
-    fc.string({ maxLength: 100 }).filter(s => 
-      !s.includes(";") && 
-      !s.includes("$(") && 
-      !s.includes("&&") && 
+    fc.string({ maxLength: 100 }).filter((s) =>
+      !s.includes(";") &&
+      !s.includes("$(") &&
+      !s.includes("&&") &&
       !s.includes("||") &&
       !s.includes("rm ") &&
       !s.includes("execute(")
@@ -38,23 +38,23 @@ export const generators = {
   invalidConfigKey: () =>
     fc.oneof(
       fc.constant(""),
-      fc.string().filter(s => s.trim().length === 0),
-      fc.constant("fuzzy..command"),  // double dots
-      fc.constant(".fuzzy.command"),  // leading dot
-      fc.constant("fuzzy.command."),  // trailing dot
-      fc.constant("fuzzy.comm@nd"),   // special characters
-      fc.constant("fuzzy.comm and")   // spaces
+      fc.string().filter((s) => s.trim().length === 0),
+      fc.constant("fuzzy..command"), // double dots
+      fc.constant(".fuzzy.command"), // leading dot
+      fc.constant("fuzzy.command."), // trailing dot
+      fc.constant("fuzzy.comm@nd"), // special characters
+      fc.constant("fuzzy.comm and"), // spaces
     ),
 
   invalidCommand: () =>
     fc.oneof(
       fc.constant(""),
-      fc.string().filter(s => s.trim().length === 0),
-      fc.constant("fzf&"),           // ampersand
-      fc.constant("fzf|peco"),       // pipe
-      fc.constant("fzf; rm"),        // semicolon
-      fc.constant("fzf && echo"),    // command injection
-      fc.constant("fzf$(rm)")        // command substitution
+      fc.string().filter((s) => s.trim().length === 0),
+      fc.constant("fzf&"), // ampersand
+      fc.constant("fzf|peco"), // pipe
+      fc.constant("fzf; rm"), // semicolon
+      fc.constant("fzf && echo"), // command injection
+      fc.constant("fzf$(rm)"), // command substitution
     ),
 
   dangerousArgs: () =>
@@ -63,7 +63,7 @@ export const generators = {
       fc.constant("--bind 'ctrl-d:execute(rm {})'"),
       fc.constant("; rm -rf /"),
       fc.constant("$(rm -rf /)"),
-      fc.constant("&& malicious_command")
+      fc.constant("&& malicious_command"),
     ),
 };
 

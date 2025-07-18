@@ -7,17 +7,19 @@ export class FuzzyFinderArgs implements ValueObject<string> {
   static create(args: string): Result.Result<FuzzyFinderArgs, Error> {
     // Security validation - reject dangerous patterns
     const dangerousPatterns = [
-      /;/,                    // command separator
-      /\$\(/,                 // command substitution
-      /&&/,                   // command chaining
-      /\|\|/,                 // command chaining
-      /\brm\s/,               // remove commands
-      /execute\(/,            // fzf execute action
+      /;/, // command separator
+      /\$\(/, // command substitution
+      /&&/, // command chaining
+      /\|\|/, // command chaining
+      /\brm\s/, // remove commands
+      /execute\(/, // fzf execute action
     ];
 
     for (const pattern of dangerousPatterns) {
       if (pattern.test(args)) {
-        return Result.fail(new Error(`Dangerous FuzzyFinderArgs pattern detected: ${args}`));
+        return Result.fail(
+          new Error(`Dangerous FuzzyFinderArgs pattern detected: ${args}`),
+        );
       }
     }
 

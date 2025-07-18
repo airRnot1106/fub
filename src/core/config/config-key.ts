@@ -12,10 +12,10 @@ export class ConfigKey implements ValueObject<string> {
 
     // Invalid format validation
     if (
-      key.includes("..") ||           // double dots
-      key.startsWith(".") ||          // leading dot
-      key.endsWith(".") ||            // trailing dot
-      /[^a-zA-Z0-9.]/.test(key)      // special characters or spaces
+      key.includes("..") || // double dots
+      key.startsWith(".") || // leading dot
+      key.endsWith(".") || // trailing dot
+      /[^a-zA-Z0-9.]/.test(key) // special characters or spaces
     ) {
       return Result.fail(new Error(`Invalid ConfigKey format: ${key}`));
     }

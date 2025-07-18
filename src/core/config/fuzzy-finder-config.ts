@@ -17,7 +17,9 @@ export class FuzzyFinderConfig {
 
   getCommandLine(): string {
     const argsValue = this.args.value.trim();
-    return argsValue ? `${this.command.value} ${argsValue}` : this.command.value;
+    return argsValue
+      ? `${this.command.value} ${argsValue}`
+      : this.command.value;
   }
 
   equals(other: FuzzyFinderConfig): boolean {
