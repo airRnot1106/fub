@@ -13,7 +13,9 @@ const invalidTagGenerator = fc.oneof(
   fc.constant(""),
   fc.constant("   "),
   fc.constant("  \t  \n  "), // Only whitespace characters
-  fc.string({ minLength: 51, maxLength: 100 }), // Too long
+  fc.string({ minLength: 51, maxLength: 100 }).filter((s) =>
+    s.trim().length > 50
+  ), // Too long after trim
   fc.string().filter((s) => s.trim().length === 0 && s.length > 0), // Non-empty but only whitespace
 );
 
