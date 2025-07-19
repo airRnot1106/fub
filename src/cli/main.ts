@@ -1,6 +1,8 @@
 import { Command } from "@cliffy/command";
 import { createAddCommand } from "./commands/add-command.ts";
+import { createConfigCommand } from "./commands/config-command.ts";
 import { FileBookmarkRepository } from "../gateway/bookmark/repository/file-bookmark-repository.ts";
+import { FileConfigRepository } from "../gateway/config/repository/file-config-repository.ts";
 import {
   ensureDataDirectory,
   getDataDirectory,
@@ -19,11 +21,15 @@ export async function createCLI() {
     throw ensureResult.error;
   }
 
-  // Create repository
-  const repository = new FileBookmarkRepository(dataDirectoryResult.value);
+  // Create repositories
+  const bookmarkRepository = new FileBookmarkRepository(
+    dataDirectoryResult.value,
+  );
+  const configRepository = new FileConfigRepository(dataDirectoryResult.value);
 
-  // Create add command
-  const addCommand = createAddCommand(repository);
+  // Create commands
+  const addCommand = createAddCommand(bookmarkRepository);
+  const configCommand = createConfigCommand(configRepository);
 
   const mainCommand = new Command()
     .name("bkm")
@@ -34,8 +40,9 @@ export async function createCLI() {
       console.log("Default fuzzy finder action (not implemented yet)");
     });
 
-  // Add subcommand
+  // Add subcommands
   mainCommand.command("add", addCommand);
+  mainCommand.command("config", configCommand);
 
   return mainCommand;
 }
