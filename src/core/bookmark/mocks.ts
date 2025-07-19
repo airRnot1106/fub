@@ -72,17 +72,18 @@ export const testConfig = {
  */
 export function createMockRepository() {
   const mockRepository = {
-    save: () => Promise.resolve(Result.succeed(undefined)),
-    findAll: () => Promise.resolve(Result.succeed([])),
+    save: () => Promise.resolve(Result.succeed(undefined as void)),
+    findAll: () => Promise.resolve(Result.succeed([] as Bookmark[])),
     findById: () =>
       Promise.resolve(
-        Result.succeed(null),
+        Result.succeed(null as Bookmark | null),
       ),
-    remove: () => Promise.resolve(Result.succeed(undefined)),
+    remove: () => Promise.resolve(Result.succeed(undefined as void)),
   };
   return {
     ...mockRepository,
     save: spy(mockRepository, "save"),
+    findAll: spy(mockRepository, "findAll"),
     findById: spy(mockRepository, "findById"),
     remove: spy(mockRepository, "remove"),
   };
@@ -137,7 +138,8 @@ export function createFailingMockRepository(errorMessage: string) {
   const mockRepository = {
     save: (): Result.ResultAsync<void, Error> =>
       Promise.resolve(Result.fail(new Error(errorMessage))),
-    findAll: () => Promise.resolve(Result.succeed([])),
+    findAll: (): Result.ResultAsync<Bookmark[], Error[]> =>
+      Promise.resolve(Result.fail([new Error(errorMessage)])),
     findById: () =>
       Promise.resolve(
         Result.succeed(null),
@@ -148,6 +150,7 @@ export function createFailingMockRepository(errorMessage: string) {
   return {
     ...mockRepository,
     save: spy(mockRepository, "save"),
+    findAll: spy(mockRepository, "findAll"),
     findById: spy(mockRepository, "findById"),
     remove: spy(mockRepository, "remove"),
   };
