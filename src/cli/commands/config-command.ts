@@ -3,16 +3,8 @@ import type { ConfigRepository } from "../../core/config/config.ts";
 import { ConfigKey } from "../../core/config/config-key.ts";
 import { Result } from "@praha/byethrow";
 
-export function createConfigCommand(repository: ConfigRepository): Command<
-  void,
-  void,
-  void
-> {
-  const fuzzyCommand = new Command<
-    void,
-    void,
-    { command?: string; args?: string }
-  >()
+export function createConfigCommand(repository: ConfigRepository): Command {
+  const fuzzyCommand = new Command()
     .name("fuzzy")
     .description("Configure fuzzy finder settings")
     .option(
@@ -20,7 +12,7 @@ export function createConfigCommand(repository: ConfigRepository): Command<
       "Fuzzy finder command (e.g., fzf, peco)",
     )
     .option("--args <args:string>", "Fuzzy finder arguments")
-    .action(async (options) => {
+    .action(async (options: { command?: string; args?: string }) => {
       if (options.command) {
         const keyResult = ConfigKey.create("fuzzy.command");
         if (Result.isSuccess(keyResult)) {
@@ -75,8 +67,8 @@ export function createConfigCommand(repository: ConfigRepository): Command<
       }
     });
 
-  return new Command<void, void, void>()
+  return new Command()
     .name("config")
     .description("Manage configuration settings")
-    .command("fuzzy", fuzzyCommand);
+    .command("fuzzy", fuzzyCommand) as unknown as Command;
 }

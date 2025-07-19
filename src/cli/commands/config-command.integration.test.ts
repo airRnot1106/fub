@@ -41,8 +41,8 @@ Deno.test("Config command integration - fuzzy config flow", async () => {
   const _command = createConfigCommand(repository);
 
   // Verify command structure
-  assertEquals(typeof command, "object");
-  assertEquals(typeof command.parse, "function");
+  assertEquals(typeof _command, "object");
+  assertEquals(typeof _command.parse, "function");
 
   // Test direct repository operations that the command would perform
   const commandKey = ConfigKey.create("fuzzy.command");
