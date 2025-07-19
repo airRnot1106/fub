@@ -9,7 +9,7 @@ export class GetConfig {
     return Result.pipe(
       Result.do(),
       Result.bind("key", () => ConfigKey.create(keyString)),
-      Result.andThen(({ key }) => this.repository.get(key))
+      Result.andThen(({ key }) => this.repository.get(key)),
     );
   }
 }

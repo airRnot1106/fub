@@ -11,12 +11,14 @@ export class SetFuzzyFinderConfig {
       Result.do(),
       Result.bind("commandKey", () => ConfigKey.create("fuzzy.command")),
       Result.bind("argsKey", () => ConfigKey.create("fuzzy.args")),
-      Result.bind("setCommand", ({ commandKey }) => 
-        this.repository.set(commandKey, config.command.value)
+      Result.bind(
+        "setCommand",
+        ({ commandKey }) =>
+          this.repository.set(commandKey, config.command.value),
       ),
-      Result.andThen(({ argsKey }) => 
+      Result.andThen(({ argsKey }) =>
         this.repository.set(argsKey, config.args.value)
-      )
+      ),
     );
   }
 }

@@ -16,21 +16,24 @@ export class GetFuzzyFinderConfig {
       Result.do(),
       Result.bind("commandKey", () => ConfigKey.create("fuzzy.command")),
       Result.bind("argsKey", () => ConfigKey.create("fuzzy.args")),
-      Result.bind("commandValue", ({ commandKey }) => 
-        this.repository.get(commandKey)
+      Result.bind(
+        "commandValue",
+        ({ commandKey }) => this.repository.get(commandKey),
       ),
-      Result.bind("argsValue", ({ argsKey }) => 
-        this.repository.get(argsKey)
+      Result.bind("argsValue", ({ argsKey }) => this.repository.get(argsKey)),
+      Result.bind(
+        "command",
+        ({ commandValue }) =>
+          FuzzyFinderCommand.create(commandValue || this.DEFAULT_COMMAND),
       ),
-      Result.bind("command", ({ commandValue }) => 
-        FuzzyFinderCommand.create(commandValue || this.DEFAULT_COMMAND)
+      Result.bind(
+        "args",
+        ({ argsValue }) =>
+          FuzzyFinderArgs.create(argsValue || this.DEFAULT_ARGS),
       ),
-      Result.bind("args", ({ argsValue }) => 
-        FuzzyFinderArgs.create(argsValue || this.DEFAULT_ARGS)
-      ),
-      Result.andThen(({ command, args }) => 
+      Result.andThen(({ command, args }) =>
         FuzzyFinderConfig.create(command, args)
-      )
+      ),
     );
   }
 }

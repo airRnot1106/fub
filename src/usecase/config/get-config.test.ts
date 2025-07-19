@@ -8,27 +8,27 @@ import type { ConfigRepository } from "../../core/config/config.ts";
 
 // Simple mock repository for testing
 function createSimpleMockRepository(
-  mockGet: (key: ConfigKey) => Result.ResultAsync<string | null, Error>
+  mockGet: (key: ConfigKey) => Result.ResultAsync<string | null, Error>,
 ): ConfigRepository {
   return {
     get: mockGet,
-    set: async () => Promise.resolve(Result.succeed(undefined)),
-    remove: async () => Promise.resolve(Result.succeed(undefined)),
-    getAll: async () => Promise.resolve(Result.succeed({})),
+    set: () => Promise.resolve(Result.succeed(undefined)),
+    remove: () => Promise.resolve(Result.succeed(undefined)),
+    getAll: () => Promise.resolve(Result.succeed({})),
   };
 }
 
 Deno.test("GetConfig - should get config value successfully", async () => {
   const key = "fuzzy.command";
   const expectedValue = "fzf";
-  
+
   const repository = createSimpleMockRepository(
-    async () => Promise.resolve(Result.succeed(expectedValue))
+    () => Promise.resolve(Result.succeed(expectedValue)),
   );
-  
+
   const usecase = new GetConfig(repository);
   const result = await usecase.execute(key);
-  
+
   assertEquals(Result.isSuccess(result), true);
   if (Result.isSuccess(result)) {
     assertEquals(result.value, expectedValue);
@@ -37,14 +37,14 @@ Deno.test("GetConfig - should get config value successfully", async () => {
 
 Deno.test("GetConfig - should return null when config does not exist", async () => {
   const key = "nonexistent.key";
-  
+
   const repository = createSimpleMockRepository(
-    async () => Promise.resolve(Result.succeed(null))
+    () => Promise.resolve(Result.succeed(null)),
   );
-  
+
   const usecase = new GetConfig(repository);
   const result = await usecase.execute(key);
-  
+
   assertEquals(Result.isSuccess(result), true);
   if (Result.isSuccess(result)) {
     assertEquals(result.value, null);
@@ -53,28 +53,28 @@ Deno.test("GetConfig - should return null when config does not exist", async () 
 
 Deno.test("GetConfig - should fail with invalid config key", async () => {
   const invalidKey = "invalid..key";
-  
+
   const repository = createSimpleMockRepository(
-    async () => Promise.resolve(Result.succeed("never-called"))
+    () => Promise.resolve(Result.succeed("never-called")),
   );
-  
+
   const usecase = new GetConfig(repository);
   const result = await usecase.execute(invalidKey);
-  
+
   assertEquals(Result.isFailure(result), true);
 });
 
 Deno.test("GetConfig - should handle repository failure", async () => {
   const key = "fuzzy.command";
   const errorMessage = "Database connection failed";
-  
+
   const repository = createSimpleMockRepository(
-    async () => Promise.resolve(Result.fail(new Error(errorMessage)))
+    () => Promise.resolve(Result.fail(new Error(errorMessage))),
   );
-  
+
   const usecase = new GetConfig(repository);
   const result = await usecase.execute(key);
-  
+
   assertEquals(Result.isFailure(result), true);
   if (Result.isFailure(result)) {
     assertEquals(result.error.message, errorMessage);
@@ -87,16 +87,16 @@ Deno.test("GetConfig - property-based test for valid keys", () => {
       generators.validConfigKey(),
       async (key) => {
         const repository = createSimpleMockRepository(
-          async () => Promise.resolve(Result.succeed("test-value"))
+          () => Promise.resolve(Result.succeed("test-value")),
         );
-        
+
         const usecase = new GetConfig(repository);
         const result = await usecase.execute(key);
-        
+
         assertEquals(Result.isSuccess(result), true);
-      }
+      },
     ),
-    { numRuns: testConfig.numRuns.normal }
+    { numRuns: testConfig.numRuns.normal },
   );
 });
 
@@ -106,15 +106,15 @@ Deno.test("GetConfig - property-based test for invalid keys", () => {
       generators.invalidConfigKey(),
       async (key) => {
         const repository = createSimpleMockRepository(
-          async () => Promise.resolve(Result.succeed("never-called"))
+          () => Promise.resolve(Result.succeed("never-called")),
         );
-        
+
         const usecase = new GetConfig(repository);
         const result = await usecase.execute(key);
-        
+
         assertEquals(Result.isFailure(result), true);
-      }
+      },
     ),
-    { numRuns: testConfig.numRuns.invalid }
+    { numRuns: testConfig.numRuns.invalid },
   );
 });

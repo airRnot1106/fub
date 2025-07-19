@@ -10,9 +10,9 @@ export class SetConfig {
       Result.do(),
       Result.bind("key", () => ConfigKey.create(keyString)),
       Result.bind("validatedValue", () => this.validateValue(value)),
-      Result.andThen(({ key, validatedValue }) => 
+      Result.andThen(({ key, validatedValue }) =>
         this.repository.set(key, validatedValue)
-      )
+      ),
     );
   }
 
