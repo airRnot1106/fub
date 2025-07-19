@@ -1,10 +1,15 @@
 import { assertEquals } from "@std/assert";
 import { Result } from "@praha/byethrow";
 import { FileConfigRepository } from "./file-config-repository.ts";
-import { getConfigDirectory } from "../utils/config-directory.ts";
 import { ConfigKey } from "../../../core/config/config-key.ts";
 import { join } from "https://deno.land/std@0.210.0/path/mod.ts";
 import { existsSync } from "https://deno.land/std@0.210.0/fs/mod.ts";
+
+// Simple config directory helper (replaces utils)
+function getConfigDirectory(): string {
+  const homeDir = Deno.env.get("HOME") || "";
+  return join(homeDir, ".config", "bkm");
+}
 
 async function createIntegrationTestRepository(): Promise<{
   repository: FileConfigRepository;
@@ -26,12 +31,13 @@ async function createIntegrationTestRepository(): Promise<{
   return { repository, configDir, cleanup };
 }
 
-Deno.test("FileConfigRepository Integration - should use default config directory", () => {
-  const repository = new FileConfigRepository();
-  const _expectedDir = getConfigDirectory();
+Deno.test("FileConfigRepository Integration - should use provided config directory", () => {
+  const configDir = getConfigDirectory();
+  const repository = new FileConfigRepository(configDir);
 
   // Test that the repository uses the expected directory structure
-  // We can't directly access the private configFile property, but we can test behavior
+  // We can access the public dataDir property
+  assertEquals(repository.dataDir, configDir);
   assertEquals(typeof repository.get, "function");
   assertEquals(typeof repository.set, "function");
   assertEquals(typeof repository.remove, "function");
@@ -182,10 +188,13 @@ Deno.test("FileConfigRepository Integration - should create config file on first
       assertEquals(Result.isSuccess(result), true);
       assertEquals(existsSync(configFile), true);
 
-      // Verify file contents
+      // Verify file contents (new array format)
       const content = await Deno.readTextFile(configFile);
-      const parsedConfig = JSON.parse(content);
-      assertEquals(parsedConfig["first.write"], "first-value");
+      const parsedConfigs = JSON.parse(content);
+      assertEquals(Array.isArray(parsedConfigs), true);
+      assertEquals(parsedConfigs.length, 1);
+      assertEquals(parsedConfigs[0].key, "first.write");
+      assertEquals(parsedConfigs[0].value, "first-value");
     }
   } finally {
     try {

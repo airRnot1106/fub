@@ -1,72 +1,144 @@
 import { Result } from "@praha/byethrow";
 import type { ConfigRepository } from "../../../core/config/config.ts";
 import type { ConfigKey } from "../../../core/config/config-key.ts";
+import { ConfigMapper } from "../mapper/config-mapper.ts";
+import { ConfigDto } from "../dto/config-dto.ts";
 import { join } from "https://deno.land/std@0.210.0/path/mod.ts";
-import { ensureDir } from "https://deno.land/std@0.210.0/fs/mod.ts";
 
 export class FileConfigRepository implements ConfigRepository {
-  private readonly configFile: string;
+  readonly dataDir: string;
+  private readonly dataFile: string;
 
-  constructor(configDir: string = "~/.config/bkm") {
-    const expandedDir = configDir.replace("~", Deno.env.get("HOME") || "");
-    this.configFile = join(expandedDir, "config.json");
+  constructor(dataDir: string) {
+    this.dataDir = dataDir;
+    this.dataFile = join(dataDir, "config.json");
   }
 
-  async get(key: ConfigKey): Result.ResultAsync<string | null, Error> {
-    try {
-      const config = await this.loadConfig();
-      return Result.succeed(config[key.value] || null);
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
+  get(key: ConfigKey): Result.ResultAsync<string | null, Error> {
+    return Result.pipe(
+      Result.try({
+        try: async () => {
+          const configDtos = await this.loadConfigs();
+          const configDto = configDtos.find((c) => c.key === key.value);
+          return configDto;
+        },
+        catch: (error) =>
+          error instanceof Error ? error : new Error(String(error)),
+      })(),
+      Result.andThen((configDto) => {
+        if (!configDto) {
+          return Result.succeed(null);
+        }
+        const domainResult = ConfigMapper.toDomain(configDto);
+        return Result.isSuccess(domainResult)
+          ? Result.succeed(domainResult.value.value)
+          : Result.fail(domainResult.error);
+      }),
+    );
   }
 
-  async set(key: ConfigKey, value: string): Result.ResultAsync<void, Error> {
-    try {
-      const config = await this.loadConfig();
-      config[key.value] = value;
-      await this.saveConfig(config);
-      return Result.succeed(undefined);
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
+  set(key: ConfigKey, value: string): Result.ResultAsync<void, Error> {
+    return Result.try({
+      try: async () => {
+        await this.ensureDirectoryExists();
+        const existingConfigs = await this.loadConfigs();
+        const configDto = ConfigMapper.toDto(key, value, new Date());
+        const updatedConfigs = this.upsertConfig(existingConfigs, configDto);
+        await this.saveConfigs(updatedConfigs);
+      },
+      catch: (error) =>
+        error instanceof Error ? error : new Error(String(error)),
+    })();
   }
 
-  async remove(key: ConfigKey): Result.ResultAsync<void, Error> {
-    try {
-      const config = await this.loadConfig();
-      delete config[key.value];
-      await this.saveConfig(config);
-      return Result.succeed(undefined);
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
+  remove(key: ConfigKey): Result.ResultAsync<void, Error> {
+    return Result.try({
+      try: async () => {
+        await this.ensureDirectoryExists();
+        const existingConfigs = await this.loadConfigs();
+        const configIndex = existingConfigs.findIndex((c) =>
+          c.key === key.value
+        );
+
+        if (configIndex === -1) {
+          throw new Error("Config not found");
+        }
+
+        const updatedConfigs = existingConfigs.filter((c) =>
+          c.key !== key.value
+        );
+        await this.saveConfigs(updatedConfigs);
+      },
+      catch: (error) =>
+        error instanceof Error ? error : new Error(String(error)),
+    })();
   }
 
-  async getAll(): Result.ResultAsync<Record<string, string>, Error> {
-    try {
-      const config = await this.loadConfig();
-      return Result.succeed(config);
-    } catch (error) {
-      return Result.fail(error as Error);
-    }
+  getAll(): Result.ResultAsync<Record<string, string>, Error> {
+    return Result.pipe(
+      Result.try({
+        try: async () => {
+          const configDtos = await this.loadConfigs();
+          return configDtos;
+        },
+        catch: (error) =>
+          error instanceof Error ? error : new Error(String(error)),
+      })(),
+      Result.andThen((configDtos) => {
+        const configRecord: Record<string, string> = {};
+
+        for (const dto of configDtos) {
+          const domainResult = ConfigMapper.toDomain(dto);
+          if (Result.isSuccess(domainResult)) {
+            configRecord[domainResult.value.key.value] =
+              domainResult.value.value;
+          } else {
+            return Result.fail(domainResult.error);
+          }
+        }
+
+        return Result.succeed(configRecord);
+      }),
+    );
   }
 
-  private async loadConfig(): Promise<Record<string, string>> {
+  private async ensureDirectoryExists(): Promise<void> {
+    await Deno.mkdir(this.dataDir, { recursive: true });
+  }
+
+  private async loadConfigs(): Promise<ConfigDto[]> {
     try {
-      const content = await Deno.readTextFile(this.configFile);
+      const content = await Deno.readTextFile(this.dataFile);
       return JSON.parse(content);
     } catch (error) {
+      // If file doesn't exist, return empty array
       if (error instanceof Deno.errors.NotFound) {
-        return {};
+        return [];
       }
       throw error;
     }
   }
 
-  private async saveConfig(config: Record<string, string>): Promise<void> {
-    await ensureDir(join(this.configFile, ".."));
-    const content = JSON.stringify(config, null, 2);
-    await Deno.writeTextFile(this.configFile, content);
+  private async saveConfigs(configs: ConfigDto[]): Promise<void> {
+    await Deno.writeTextFile(
+      this.dataFile,
+      JSON.stringify(configs, null, 2),
+    );
+  }
+
+  private upsertConfig(
+    existingConfigs: ConfigDto[],
+    configDto: ConfigDto,
+  ): ConfigDto[] {
+    const existingIndex = existingConfigs.findIndex((c) =>
+      c.key === configDto.key
+    );
+
+    if (existingIndex >= 0) {
+      existingConfigs[existingIndex] = configDto;
+      return existingConfigs;
+    } else {
+      return [...existingConfigs, configDto];
+    }
   }
 }
