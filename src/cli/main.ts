@@ -7,7 +7,7 @@ import {
 } from "./utils/data-directory.ts";
 import { Result } from "@praha/byethrow";
 
-export async function createCLI(): Promise<Command<void, void, void>> {
+export async function createCLI() {
   // Setup data directory
   const dataDirectoryResult = getDataDirectory();
   if (Result.isFailure(dataDirectoryResult)) {
@@ -40,7 +40,7 @@ export async function createCLI(): Promise<Command<void, void, void>> {
   return mainCommand;
 }
 
-export async function runCLI(args: string[]): Promise<void> {
+export async function runCLI(args: string[]) {
   const cli = await createCLI();
   await cli.parse(args);
 }
