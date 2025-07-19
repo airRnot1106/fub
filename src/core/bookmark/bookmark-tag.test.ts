@@ -12,7 +12,9 @@ const validTagGenerator = fc.string({ minLength: 1, maxLength: 50 }).filter(
 const invalidTagGenerator = fc.oneof(
   fc.constant(""),
   fc.constant("   "),
-  fc.string({ minLength: 51 }), // Too long
+  fc.constant("  \t  \n  "), // Only whitespace characters
+  fc.string({ minLength: 51, maxLength: 100 }), // Too long
+  fc.string().filter((s) => s.trim().length === 0 && s.length > 0), // Non-empty but only whitespace
 );
 
 Deno.test("BookmarkTag - should create from valid string", () => {
