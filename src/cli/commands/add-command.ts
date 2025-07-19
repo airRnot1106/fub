@@ -4,7 +4,11 @@ import { BookmarkRepository } from "../../core/bookmark/bookmark.ts";
 import { AddBookmark } from "../../usecase/bookmark/add-bookmark.ts";
 import { promptForBookmarkData } from "../prompts/bookmark-prompt.ts";
 
-export function createAddCommand(repository: BookmarkRepository): Command {
+export function createAddCommand(repository: BookmarkRepository): Command<
+  void,
+  void,
+  { url?: string; title?: string; tags?: string }
+> {
   return new Command()
     .name("add")
     .description("Add a new bookmark")
